@@ -253,8 +253,61 @@
       "id": "VG-20261021-0029",
       "date": "2026-10-21",
       "action": "github.commit",
-      "status": "pending",
-      "detail": "Atomic vGUITAR Note Trainer v0.2 update on main; commit SHA readback later"
+      "status": "success",
+      "detail": "Atomic v0.2.0 update on main: tuning/audio, local tests, CI workflow removed",
+      "commit": "fb93fc0bb01ca70e90f705a617e45a4e15506f76"
+    },
+    {
+      "id": "VG-20261021-0030",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "success",
+      "detail": "v0.2.0 release uploaded to designated Drive asset folder",
+      "path": "vGUITAR_NoteTrainer_v0.2.0.zip",
+      "drive_file_id": "1KazFqQ4BTOVw1E-fHoE1UlQOciWmmHwB",
+      "size_bytes": 13513,
+      "sha256": "c6f32a3a146b7ca00f449545f02c09ff4d2d320232dc9b828aa0b42e87a15205"
+    },
+    {
+      "id": "VG-20261021-0031",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "detail": "Updated canonical JSON index in place: preserved existing Drive file ID and added v0.2.0 release",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261021-0032",
+      "date": "2026-10-21",
+      "action": "drive.delete_file",
+      "status": "success",
+      "detail": "Deleted temporary Drive JSON index upload after in-place update and verification",
+      "path": "_TEMP_index_update_v0.2.json"
+    },
+    {
+      "id": "VG-20261021-0033",
+      "date": "2026-10-21",
+      "action": "library.delete",
+      "status": "success",
+      "detail": "Removed staging payload and ZIP from temporary library folder",
+      "path": "/vGUITAR_TEMP_STAGE_20261021"
+    },
+    {
+      "id": "VG-20261021-0034",
+      "date": "2026-10-21",
+      "action": "github.verify",
+      "status": "success",
+      "detail": "Verified v0.2.0 content, disabled Actions policy, and removal of CI YAML",
+      "commit": "fb93fc0bb01ca70e90f705a617e45a4e15506f76"
+    },
+    {
+      "id": "VG-20261021-0035",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Amended canonical JSON journal to record completed GitHub and Drive work",
+      "path": "docs/dev/events.json"
     }
   ]
 }
