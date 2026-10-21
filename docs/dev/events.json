@@ -973,6 +973,34 @@
       "status": "success",
       "detail": "Atomic source/test/version and dev-event ledger update for v0.4.5 on main. No GitHub Actions or frozen documentation modified.",
       "path": "docs/dev/events.json"
+    },
+    {
+      "id": "VG-20261021-0119",
+      "date": "2026-10-21",
+      "action": "github.verify",
+      "status": "success",
+      "detail": "Read-back confirmed v0.4.5 release in main; all six changed files including JSON journal match intended release",
+      "commit": "737a89f1271af1e762caff3ba62492dbf7434cd5"
+    },
+    {
+      "id": "VG-20261021-0120",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "success",
+      "detail": "Uploaded v0.4.5 runnable release ZIP to designated Google Drive folder after deduplication check",
+      "path": "vGUITAR_NoteTrainer_v0.4.5.zip",
+      "drive_file_id": "1LkKW3UTHhOBU_jp_gjGVppvjM3INeAWq",
+      "sha256": "30997edf60f268dbf3235ce028d773c3a427ae72b02745f57fbd7a53856ae996",
+      "size_bytes": 27971
+    },
+    {
+      "id": "VG-20261021-0121",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "detail": "Updated canonical machine-readable asset index in place, preserved original Drive ID and added release v0.4.5",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
     }
   ]
 }
