@@ -360,6 +360,82 @@
       "status": "success",
       "detail": "Append Windows playback patch and Drive asset change events into canonical dev journal",
       "path": "docs/dev/events.json"
+    },
+    {
+      "id": "VG-20261021-0042",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "30 unittest passed; py_compile passed for 3 runtime modules"
+    },
+    {
+      "id": "VG-20261021-0043",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "Tk GUI functional smoke: preparation deadline, incorrect/correct feedback, response clock, history, clipboard, tuning saved"
+    },
+    {
+      "id": "VG-20261021-0044",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "Tk GUI 680x500, 780x600, 1024x760 visual and widget bounds checks; one clipping issue corrected"
+    },
+    {
+      "id": "VG-20261021-0045",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
+      "path": "vguitar_notes.py"
+    },
+    {
+      "id": "VG-20261021-0046",
+      "date": "2026-10-21",
+      "action": "github.create_file",
+      "status": "success",
+      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
+      "path": "vguitar_storage.py"
+    },
+    {
+      "id": "VG-20261021-0047",
+      "date": "2026-10-21",
+      "action": "github.create_file",
+      "status": "success",
+      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
+      "path": "tests/test_storage.py"
+    },
+    {
+      "id": "VG-20261021-0048",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
+      "path": "tests/gui_smoke.py"
+    },
+    {
+      "id": "VG-20261021-0049",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
+      "path": "VERSION.json"
+    },
+    {
+      "id": "VG-20261021-0050",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Ignore all private local settings and results in both local repo and nested runtime directories",
+      "path": ".gitignore"
+    },
+    {
+      "id": "VG-20261021-0051",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Commit validated v0.3.0 code, tests, ignore rules, version and dev JSON journal without GitHub Actions"
     }
   ]
 }

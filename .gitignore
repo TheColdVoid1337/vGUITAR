@@ -442,3 +442,7 @@ build/
 htmlcov/
 *.zip
 *.png
+
+# vGUITAR local settings and results
+/settings/
+/results/

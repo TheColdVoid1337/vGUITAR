@@ -10,12 +10,19 @@ import json
 import os
 from pathlib import Path
 import random
+import time
+from datetime import datetime, timezone
+from uuid import uuid4
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from dataclasses import dataclass
 from typing import Optional
 
 from vguitar_audio import AudioPlayer
+from vguitar_storage import (
+    ensure_dirs, preferences_path, read_preferences, save_preferences,
+    save_run, list_runs, run_statistics, export_runs_for_llm,
+)
 
 
 # Pitch classes: C=0, C#=1, ..., B=11.
@@ -65,6 +72,10 @@ def midi_label(midi: int) -> str:
 
 
 def settings_path() -> Path:
+    return preferences_path()
+
+
+def legacy_settings_path() -> Path:
     base = Path(os.environ.get("APPDATA", str(Path.home() / ".config"))) if os.name == "nt" else Path.home() / ".config"
     return base / "vGUITAR" / "note_trainer_settings.json"
 
@@ -147,24 +158,89 @@ def blend_hex(foreground: str, background: str, opacity: float) -> str:
     return "#" + "".join(f"{n:02x}" for n in mixed)
 
 
+class Tooltip:
+    """Compact delayed hover help; never steals focus."""
+    def __init__(self, widget: tk.Widget, text: str) -> None:
+        self.widget, self.text = widget, text
+        self.popup = None
+        self.timer = None
+        widget.bind("<Enter>", self._schedule, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<ButtonPress>", self._hide, add="+")
+
+    def _schedule(self, event=None) -> None:
+        self._hide()
+        self.timer = self.widget.after(550, self._show)
+
+    def _show(self) -> None:
+        self.timer = None
+        if not self.widget.winfo_exists():
+            return
+        self.popup = tk.Toplevel(self.widget)
+        self.popup.wm_overrideredirect(True)
+        self.popup.attributes("-topmost", True)
+        label = tk.Label(self.popup, text=self.text, font=(FONT, 9), fg=TEXT, bg="#26384d",
+                         justify="left", wraplength=300, padx=10, pady=7, relief="solid", bd=1)
+        label.pack()
+        self.popup.update_idletasks()
+        x = min(self.widget.winfo_pointerx() + 14, self.widget.winfo_screenwidth() - self.popup.winfo_reqwidth() - 8)
+        y = min(self.widget.winfo_pointery() + 18, self.widget.winfo_screenheight() - self.popup.winfo_reqheight() - 8)
+        self.popup.wm_geometry(f"+{max(0,x)}+{max(0,y)}")
+
+    def _hide(self, event=None) -> None:
+        if self.timer is not None:
+            try:
+                self.widget.after_cancel(self.timer)
+            except tk.TclError:
+                pass
+            self.timer = None
+        if self.popup is not None:
+            self.popup.destroy()
+            self.popup = None
+
+
 class NoteTrainer:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("vGUITAR — Note Trainer")
         self.root.configure(bg=BG)
-        self.root.minsize(850, 650)
+        self.root.minsize(680, 500)
         screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
-        self.root.geometry(f"{min(1190, screen_w - 40)}x{min(855, screen_h - 65)}")
+        self.root.geometry(f"{max(680, min(1070, screen_w - 80))}x{max(500, min(760, screen_h - 95))}")
 
+        self.storage_warning = ""
+        try:
+            ensure_dirs()
+        except OSError as exc:
+            self.storage_warning = f"Локальные папки недоступны: {exc}"
+        if not settings_path().exists() and legacy_settings_path().exists():
+            # One-time migration from v0.2's OS configuration directory.
+            prior_name, prior_midi, prior_volume = read_settings(legacy_settings_path())
+            try:
+                write_settings(settings_path(), prior_name, prior_midi, prior_volume)
+            except OSError:
+                pass
         self.preset_name, self.tuning, initial_volume = read_settings(settings_path())
+        lesson = read_preferences().get("lesson", {})
+        if not isinstance(lesson, dict):
+            lesson = {}
         self.audio = AudioPlayer(initial_volume)
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
-        self.active_strings = 2            # Thick E, then A, then D, ...
-        self.active_frets = 7              # Frets 1..N, plus open string 0
-        self.question_count = 10
-        self.mode = "name"                # name / find
-        self.phase = "study"              # study / quiz / result
+        self.active_strings = self._bounded(lesson.get("active_strings", 2), 1, 6, 2)
+        self.active_frets = self._bounded(lesson.get("active_frets", 7), 1, 24, 7)
+        self.question_count = self._bounded(lesson.get("question_count", 10), 5, 100, 10)
+        self.study_seconds = self._bounded(lesson.get("study_seconds", 60), 10, 300, 60)
+        self.mode = lesson.get("mode") if lesson.get("mode") in ("name", "find") else "name"
+        self.phase = "ready"              # ready / study / quiz / result
+        self.study_deadline: Optional[float] = None
+        self.study_after_id: Optional[str] = None
+        self.study_left = self.study_seconds
+        self.question_started: Optional[float] = None
+        self.run_started_at = ""
+        self.run_id = ""
+        self.responses: list[dict] = []
+        self.current_run: Optional[dict] = None
         self.questions: list[Question] = []
         self.index = 0
         self.correct = 0
@@ -173,7 +249,7 @@ class NoteTrainer:
         self.guess_fret: Optional[int] = None
         self.feedback = ""
         self.feedback_is_correct = False
-        self.study_message = "Сначала повтори ноты на подсвеченных струнах, затем начни тест."
+        self.study_message = "Выбери область и запусти повторение."
 
         self._create_layout()
         self._update_all()
@@ -182,6 +258,53 @@ class NoteTrainer:
         self.root.bind_all("<MouseWheel>", self._mousewheel)
         self.root.bind_all("<Button-4>", lambda event: self.page_scroll(-1))
         self.root.bind_all("<Button-5>", lambda event: self.page_scroll(1))
+        self._save_preferences()
+
+    @staticmethod
+    def _bounded(value: object, minimum: int, maximum: int, fallback: int) -> int:
+        try:
+            return max(minimum, min(maximum, int(value)))
+        except (ValueError, TypeError, OverflowError):
+            return fallback
+
+    def _save_preferences(self) -> None:
+        try:
+            save_preferences({
+                "schema_version": 2,
+                "preset": self.preset_name,
+                "tuning_midi": list(self.tuning),
+                "volume": self.audio.volume,
+                "lesson": {
+                    "active_strings": self.active_strings,
+                    "active_frets": self.active_frets,
+                    "question_count": self.question_count,
+                    "study_seconds": self.study_seconds,
+                    "mode": self.mode,
+                },
+            })
+        except OSError as exc:
+            self.storage_warning = f"Не удалось сохранить настройки: {exc}"
+
+    def _cancel_study_timer(self) -> None:
+        if self.study_after_id is not None:
+            try:
+                self.root.after_cancel(self.study_after_id)
+            except tk.TclError:
+                pass
+            self.study_after_id = None
+        self.study_deadline = None
+
+    def _copy_text(self, data: str) -> None:
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(data)
+            self.root.update()  # clipboard survives app exit on Windows
+            self._set_status("Скопировано! Вставь Ctrl+V в чат.")
+        except tk.TclError as exc:
+            messagebox.showerror("Буфер обмена", str(exc), parent=self.root)
+
+    def _set_status(self, text: str) -> None:
+        self.status_label.config(text=text)
 
     def _label(self, parent: tk.Widget, text: str, size: int = 11,
                color: str = TEXT, bold: bool = False, **kwargs) -> tk.Label:
@@ -217,14 +340,15 @@ class NoteTrainer:
         settings_menu = tk.Menu(menu, tearoff=False)
         settings_menu.add_command(label="Строй и звук…", command=self.open_settings)
         menu.add_cascade(label="Настройки", menu=settings_menu)
+        menu.add_command(label="История", command=self.open_history)
+        menu.add_command(label="Справка", command=self.open_help)
         self.root.config(menu=menu)
 
         header = tk.Frame(self.outer, bg=BG)
         header.pack(fill="x", padx=22, pady=(16, 12))
         self._label(header, "vGUITAR", 13, ACCENT, True, bg=BG).pack(anchor="w")
         self._label(header, "Тренажёр нот на грифе", 23, TEXT, True, bg=BG).pack(anchor="w")
-        self._label(header, "Сначала изучение карты, затем проверка без подсказок. Без интернета и дополнительных библиотек.",
-                    10, MUTED, bg=BG).pack(anchor="w", pady=(3, 0))
+        self._label(header, "Учи ноты · Проверяй себя · Следи за прогрессом", 10, MUTED, bg=BG).pack(anchor="w", pady=(3, 0))
 
         settings = tk.Frame(self.outer, bg=PANEL, padx=16, pady=12,
                             highlightbackground=BORDER, highlightthickness=1)
@@ -233,17 +357,17 @@ class NoteTrainer:
         line1.pack(fill="x")
         self.strings_value = self._counter(line1, "Активных струн", "strings", 1, 6)
         self.frets_value = self._counter(line1, "Активных ладов", "frets", 1, 24)
-        self.questions_value = self._counter(line1, "Вопросов в тесте", "questions", 5, 100, step=5)
+        self.questions_value = self._counter(line1, "Вопросов", "questions", 5, 100, step=5)
         line2 = tk.Frame(settings, bg=PANEL)
-        line2.pack(fill="x", pady=(12, 0))
-        self._label(line2, "Тип проверки", 10, MUTED).pack(side="left", padx=(0, 12))
+        line2.pack(fill="x", pady=(9, 0))
+        self.study_value = self._counter(line2, "Повторение, сек", "study", 10, 300, step=10)
+        self._label(line2, "Режим", 10, MUTED).pack(side="left", padx=(0, 8), pady=(22,0))
         self.mode_buttons: dict[str, tk.Button] = {}
         for m, text in (("name", "Назови ноту"), ("find", "Найди ноту на струне")):
             btn = self._button(line2, text, lambda mode=m: self.change_mode(mode))
             btn.pack(side="left", padx=(0, 7))
             self.mode_buttons[m] = btn
-        self._label(line2, "Активируем струны от толстой 6-й к тонкой 1-й.",
-                    9, MUTED).pack(side="right")
+
 
         board_card = tk.Frame(self.outer, bg=PANEL, padx=16, pady=12,
                               highlightbackground=BORDER, highlightthickness=1)
@@ -269,7 +393,7 @@ class NoteTrainer:
         hbar.pack(fill="x")
         self.board.configure(xscrollcommand=hbar.set)
         self.board.bind("<Button-1>", self._click_board)
-        self._label(board_card, "0 = открытая струна · Каждая клетка = один полутон · Струны всегда показаны сверху вниз: 1 → 6",
+        self._label(board_card, "0 — открытая струна. Прокрути гриф вправо, чтобы увидеть дальние лады.",
                     9, MUTED).pack(anchor="w", pady=(8, 0))
 
         quiz_card = tk.Frame(self.outer, bg=PANEL, padx=16, pady=12,
@@ -286,8 +410,13 @@ class NoteTrainer:
         footer.pack(fill="x", padx=22, pady=(0, 15))
         self.footer_label = self._label(footer, "", 9, MUTED, bg=BG)
         self.footer_label.pack(anchor="w")
+        self.status_label = self._label(footer, "", 9, ACCENT, bg=BG)
+        self.status_label.pack(anchor="w")
+        Tooltip(self.board, "Во время повторения нажми на ноту, чтобы услышать её. В режиме поиска выбери нужный лад.")
 
     def _on_close(self) -> None:
+        self._cancel_study_timer()
+        self._save_preferences()
         self.audio.close()
         self.root.destroy()
 
@@ -377,6 +506,7 @@ class NoteTrainer:
             changed = new_tuning != self.tuning
             self.preset_name, self.tuning = new_preset, new_tuning
             self.audio.volume = new_volume
+            self._save_preferences()
             if changed:
                 self.show_map("Строй изменён. Изучи обновлённые ноты перед тестом.")
             else:
@@ -400,13 +530,13 @@ class NoteTrainer:
     def _mousewheel(self, event: tk.Event) -> None:
         # Windows uses multiples of 120; macOS often sends smaller values.
         units = -1 if event.delta > 0 else 1
-        if event.delta:
+        if event.delta and event.widget.winfo_toplevel() == self.root:
             self.page_scroll(units)
 
     def _counter(self, parent: tk.Widget, label: str, kind: str,
                  minimum: int, maximum: int, step: int = 1) -> tk.Label:
         box = tk.Frame(parent, bg=PANEL)
-        box.pack(side="left", padx=(0, 35))
+        box.pack(side="left", padx=(0, 15))
         self._label(box, label, 10, MUTED).pack(anchor="w", pady=(0, 5))
         row = tk.Frame(box, bg=PANEL)
         row.pack(anchor="w")
@@ -414,6 +544,10 @@ class NoteTrainer:
         value = self._label(row, "", 15, TEXT, True, width=4)
         value.pack(side="left", padx=8)
         self._button(row, "+", lambda: self.change_setting(kind, step)).pack(side="left")
+        Tooltip(box, {"strings": "Струны активируются от басовой шестой к тонкой первой.",
+                      "frets": "Диапазон 0–N, включая открытую струну.",
+                      "questions": "Число заданий в одном тесте.",
+                      "study": "Время показа подписанных нот перед тестом. По окончании стартует тест."}[kind])
         return value
 
     def _active(self, row: int) -> bool:
@@ -424,20 +558,44 @@ class NoteTrainer:
             self.active_strings = max(1, min(6, self.active_strings + delta))
         elif kind == "frets":
             self.active_frets = max(1, min(24, self.active_frets + delta))
-        else:
+        elif kind == "questions":
             self.question_count = max(5, min(100, self.question_count + delta))
-        self.show_map("Диапазон изменён. Повтори ноты в новой области и начни тест.")
+        elif kind == "study":
+            self.study_seconds = max(10, min(300, self.study_seconds + delta))
+        self._save_preferences()
+        self.show_map("Параметры изменены")
 
     def change_mode(self, mode: str) -> None:
         self.mode = mode
-        self.show_map("Режим изменён. Повтори карту перед новой проверкой.")
+        self._save_preferences()
+        self.show_map("Режим изменён")
 
     def show_map(self, message: Optional[str] = None) -> None:
-        self.phase = "study"
+        """Preparation starts hidden; the full map is visible only for a timed window."""
+        self._cancel_study_timer()
+        self.phase = "ready"
         self.checked = False
         self.guess_fret = None
-        self.study_message = message or "Повтори ноты в цветной области. Когда будешь готов — начни проверку."
+        self.study_message = message or "Готов к повторению?"
         self._update_all()
+
+    def start_study(self) -> None:
+        self._cancel_study_timer()
+        self.phase = "study"
+        self.study_deadline = time.monotonic() + self.study_seconds
+        self.study_left = self.study_seconds
+        self._update_all()
+        self._study_tick()
+
+    def _study_tick(self) -> None:
+        if self.phase != "study" or self.study_deadline is None:
+            return
+        self.study_left = max(0, int(self.study_deadline - time.monotonic() + .999))
+        if self.study_left <= 0:
+            self.start_quiz()
+        else:
+            self.quiz_heading.config(text=f"Повторение · {self.study_left} с")
+            self.study_after_id = self.root.after(200, self._study_tick)
 
     def _prefer_flats(self) -> bool:
         return "♭" in self.preset_name
@@ -476,6 +634,11 @@ class NoteTrainer:
         return questions[:self.question_count]
 
     def start_quiz(self) -> None:
+        self._cancel_study_timer()
+        self.run_started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        self.run_id = uuid4().hex
+        self.responses = []
+        self.current_run = None
         self.questions = self._make_questions()
         self.index = 0
         self.correct = 0
@@ -485,6 +648,7 @@ class NoteTrainer:
         self.feedback = ""
         self.phase = "quiz"
         self._update_all()
+        self.question_started = time.monotonic()
 
     def _current(self) -> Question:
         return self.questions[self.index]
@@ -492,23 +656,39 @@ class NoteTrainer:
     def _feedback(self, correct: bool, actual_pc: Optional[int] = None) -> None:
         q = self._current()
         target_pc = self._pitch_class(q.row, q.fret)
+        # Record response BEFORE sound synthesis/UI rendering delays.
+        duration = round(max(0.0, time.monotonic() - self.question_started), 3) if self.question_started is not None else 0.0
+        self.question_started = None
         self.checked = True
         self.feedback_is_correct = correct
+        answer_pc = actual_pc if self.mode == "find" else getattr(self, "_chosen_pc", None)
+        self.responses.append({
+            "index": self.index + 1,
+            "mode": self.mode,
+            "string_number": int(STRINGS[q.row][0]),
+            "fret": q.fret,
+            "expected_note": self._note_name(target_pc),
+            "expected_midi": self._pitch(q.row, q.fret),
+            "answer_note": self._note_name(answer_pc) if answer_pc is not None else None,
+            "answer_fret": self.guess_fret if self.mode == "find" else None,
+            "correct": bool(correct),
+            "response_seconds": duration,
+        })
         if correct:
             self.correct += 1
-            self.feedback = f"Верно! {self._readable_note(target_pc)}."
+            self.feedback = f"Верно · {self._readable_note(target_pc)} · {duration:.2f} с"
             self.audio.play(self._pitch(q.row, self.guess_fret if self.mode == "find" and self.guess_fret is not None else q.fret))
         else:
             n = STRINGS[q.row][0]
             if self.mode == "name":
-                self.feedback = f"Правильный ответ: {self._readable_note(target_pc)}."
+                self.feedback = f"{self._readable_note(target_pc)} · {duration:.2f} с"
                 self.mistakes.append(f"{n}-я струна, лад {q.fret}: {self._readable_note(target_pc)}")
             else:
                 valid = [f for f in range(self.active_frets + 1)
                          if self._pitch_class(q.row, f) == target_pc]
                 frets = ", ".join(map(str, valid))
-                self.feedback = (f"Ты выбрал {self._readable_note(actual_pc)}. "
-                                 f"Нужная нота: {self._readable_note(target_pc)} (лад: {frets}).")
+                self.feedback = (f"{self._readable_note(actual_pc)} → {self._readable_note(target_pc)} "
+                                 f"(лад: {frets}) · {duration:.2f} с")
                 self.mistakes.append(f"{n}-я струна: найти {self._readable_note(target_pc)} (лады {frets})")
             wrong_fret = self.guess_fret if self.mode == "find" and self.guess_fret is not None else q.fret
             self.audio.play(self._pitch(q.row, wrong_fret), buzzing=True)
@@ -517,6 +697,7 @@ class NoteTrainer:
     def answer_name(self, pitch_class: int) -> None:
         if self.phase != "quiz" or self.checked or self.mode != "name":
             return
+        self._chosen_pc = pitch_class
         self._feedback(pitch_class == self._pitch_class(self._current().row, self._current().fret))
 
     def _click_board(self, event: tk.Event) -> None:
@@ -525,7 +706,7 @@ class NoteTrainer:
         row = int((event.y - TOP) // ROW_H)
         if not (0 <= fret <= self.active_frets and 0 <= row < 6 and self._active(row)):
             return
-        if self.phase == "study":
+        if self.phase == "study" and self.study_deadline is not None and time.monotonic() < self.study_deadline:
             self.audio.play(self._pitch(row, fret))
             return
         if self.phase != "quiz" or self.checked or self.mode != "find":
@@ -537,6 +718,11 @@ class NoteTrainer:
         pc = self._pitch_class(row, fret)
         self._feedback(pc == self._pitch_class(q.row, q.fret), actual_pc=pc)
 
+    def abort_quiz(self) -> None:
+        if self.phase == "quiz" and messagebox.askyesno(
+                "Прервать тест", "Текущий тест не будет сохранён. Прервать?", parent=self.root):
+            self.show_map("Тест прерван")
+
     def next_question(self) -> None:
         if self.phase != "quiz" or not self.checked:
             return
@@ -546,17 +732,139 @@ class NoteTrainer:
         self.feedback = ""
         if self.index >= len(self.questions):
             self.phase = "result"
+            self._finish_run()
         self._update_all()
+        if self.phase == "quiz":
+            self.question_started = time.monotonic()
+
+    def _finish_run(self) -> None:
+        self.current_run = {
+            "schema_version": 1,
+            "app_version": "0.3.0",
+            "run_id": self.run_id,
+            "started_at": self.run_started_at,
+            "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "configuration": {
+                "preset": self.preset_name,
+                "tuning_midi": list(self.tuning),
+                "active_strings": self.active_strings,
+                "active_frets": self.active_frets,
+                "question_count": len(self.questions),
+                "study_seconds": self.study_seconds,
+                "mode": self.mode,
+            },
+            "questions": self.responses[:],
+        }
+        try:
+            save_run(self.current_run)
+            self._set_status("Результат сохранён в results/")
+        except (OSError, ValueError) as exc:
+            self._set_status(f"Не удалось сохранить результат: {exc}")
+            messagebox.showwarning("Сохранение результата", str(exc), parent=self.root)
+
+    def export_current(self) -> None:
+        if self.current_run is not None:
+            self._copy_text(export_runs_for_llm([self.current_run]))
+
+    def open_help(self) -> None:
+        messagebox.showinfo("Как пользоваться", "1. Выбери струны, лады и длительность повторения.\n"
+            "2. Нажми «Повторение» — ноты появятся на время.\n"
+            "3. Когда таймер закончится, начнётся тест.\n"
+            "4. Ответь кнопкой или нажатием на гриф.\n"
+            "5. Итог сохраняется в results/. Кнопка «Export Results» копирует JSON.\n"
+            "6. Меню «История» позволяет выбрать несколько запусков и копировать их отчёт.\n"
+            "Папки settings/ и results/ находятся рядом с программой и исключены из Git.", parent=self.root)
+
+    def open_history(self) -> None:
+        if getattr(self, "_history_window", None) is not None and self._history_window.winfo_exists():
+            self._history_window.lift()
+            return
+        window = tk.Toplevel(self.root, bg=BG)
+        self._history_window = window
+        window.title("vGUITAR — История")
+        sw, sh = window.winfo_screenwidth(), window.winfo_screenheight()
+        window.geometry(f"{max(650,min(1010,sw-80))}x{max(430,min(620,sh-120))}")
+        window.minsize(650, 430)
+        pane = tk.Frame(window, bg=PANEL, padx=14, pady=12)
+        pane.pack(fill="both", expand=True, padx=12, pady=12)
+        self._label(pane, "История тестов", 17, TEXT, True).pack(anchor="w")
+        runs, skipped = list_runs()
+        subtitle = f"Запусков: {len(runs)}" + (f" · Повреждено: {skipped}" if skipped else "")
+        self._label(pane, subtitle, 10, MUTED).pack(anchor="w", pady=(2, 10))
+        area = tk.Frame(pane, bg=PANEL)
+        area.pack(fill="both", expand=True)
+        columns = ("date", "mode", "range", "score", "mean", "median", "tuning")
+        tree = ttk.Treeview(area, columns=columns, show="headings", selectmode="extended")
+        headings = {"date":"Дата UTC", "mode":"Режим", "range":"Область", "score":"Точность", "mean":"Среднее", "median":"Медиана", "tuning":"Строй"}
+        widths = {"date":152, "mode":115, "range":110, "score":95, "mean":94, "median":94, "tuning":235}
+        for key in columns:
+            tree.heading(key,text=headings[key])
+            tree.column(key,width=widths[key],minwidth=75,stretch=key=="tuning")
+        vs = ttk.Scrollbar(area,orient="vertical",command=tree.yview)
+        hs = ttk.Scrollbar(area,orient="horizontal",command=tree.xview)
+        tree.configure(yscrollcommand=vs.set,xscrollcommand=hs.set)
+        tree.grid(row=0,column=0,sticky="nsew")
+        vs.grid(row=0,column=1,sticky="ns")
+        hs.grid(row=1,column=0,sticky="ew")
+        area.grid_rowconfigure(0,weight=1)
+        area.grid_columnconfigure(0,weight=1)
+        indexed = {}
+        for i,run in enumerate(runs):
+            stat = run_statistics(run)
+            cfg = run.get("configuration",{})
+            item_id = f"run_{i}"
+            indexed[item_id] = run
+            tree.insert("", "end", iid=item_id, values=(
+                str(run.get("finished_at", ""))[:19].replace("T", " "),
+                "Нота" if cfg.get("mode")=="name" else "Найти",
+                f"{cfg.get('active_strings','?')} стр. / {cfg.get('active_frets','?')} л.",
+                f"{stat['correct']}/{stat['total']} ({stat['accuracy_percent']}%)",
+                f"{stat['mean_seconds']:.2f} с" if stat['mean_seconds'] is not None else "—",
+                f"{stat['median_seconds']:.2f} с" if stat['median_seconds'] is not None else "—",
+                cfg.get("preset", "—"),
+            ))
+        details = tk.Text(pane, bg=BG, fg=TEXT, height=5, wrap="word", font=(FONT,10), relief="flat")
+        details.pack(fill="x", pady=(9, 5))
+        details.configure(state="disabled")
+        def selected():
+            return [indexed[r] for r in tree.selection()]
+        def show_details(event=None):
+            current=selected()
+            details.configure(state="normal")
+            details.delete("1.0","end")
+            if current:
+                s=run_statistics(current[0])
+                wrong = ", ".join(f"{k} ×{v}" for k,v in s["wrong_notes"].items()) or "нет"
+                details.insert("end",f"Правильно: {s['correct']}/{s['total']} · Среднее: {s['mean_seconds']} с · Медиана: {s['median_seconds']} с\nОшибки: {wrong}\nВыбрано запусков: {len(current)}")
+            details.configure(state="disabled")
+        tree.bind("<<TreeviewSelect>>", show_details)
+        bottom=tk.Frame(pane,bg=PANEL)
+        bottom.pack(fill="x",pady=(5,0))
+        def do_export():
+            chosen=selected()
+            if not chosen:
+                messagebox.showinfo("Экспорт", "Выбери хотя бы один запуск.",parent=window)
+                return
+            self._copy_text(export_runs_for_llm(chosen))
+        export=self._button(bottom,"Export Selected Runs for LLM",do_export,primary=True)
+        export.pack(side="left")
+        Tooltip(export,"Копирует выбранные запуски, включая время каждого ответа, в буфер обмена.")
+        self._button(bottom,"Закрыть",window.destroy).pack(side="right")
+        if runs:
+            tree.selection_set("run_0")
+            tree.see("run_0")
+            show_details()
 
     def _enter_key(self, event: tk.Event) -> None:
         if self.phase == "quiz" and self.checked:
             self.next_question()
 
     def _update_all(self) -> None:
-        self.footer_label.config(text=f"Строй: {self.preset_name}  •  Нажми ноту на учебной карте, чтобы услышать её  •  Esc = карта")
+        self.footer_label.config(text=f"Строй: {self.preset_name}   •   Esc: подготовка   •   ? Справка в меню")
         self.strings_value.config(text=str(self.active_strings))
         self.frets_value.config(text=str(self.active_frets))
         self.questions_value.config(text=str(self.question_count))
+        self.study_value.config(text=str(self.study_seconds))
         for mode, btn in self.mode_buttons.items():
             selected = (mode == self.mode)
             btn.config(bg=ACCENT if selected else BUTTON_BG,
@@ -569,7 +877,7 @@ class NoteTrainer:
         self.string_labels.delete("all")
         width = (self.active_frets + 1) * CELL_W
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
-        self.board_heading.config(text="КАРТА ДЛЯ ПОВТОРЕНИЯ" if self.phase == "study"
+        self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study"
                                   else "ГРИФ БЕЗ ПОДСКАЗОК")
         self.board_hint.config(text=f"{self.active_strings} из 6 струн · 0–{self.active_frets} лад")
         for fret in range(self.active_frets + 1):
@@ -651,14 +959,17 @@ class NoteTrainer:
     def _update_quiz_ui(self) -> None:
         self._clear(self.quiz_body)
         self._clear(self.action_row)
-        if self.phase == "study":
-            self.quiz_heading.config(text="Сначала изучи карту")
-            self._label(self.quiz_body, self.study_message, 11, TEXT,
-                        wraplength=950, justify="left").pack(anchor="w")
+        if self.phase in ("ready", "study"):
+            self.quiz_heading.config(text="Подготовка" if self.phase == "ready" else f"Повторение · {self.study_left} с")
             self._label(self.quiz_body,
-                        "Нажми на любую активную ноту, чтобы услышать её. «Начать тест» уберёт названия нот.",
-                        10, MUTED, wraplength=950, justify="left").pack(anchor="w", pady=(5, 0))
-            self._button(self.action_row, "Начать тест  →", self.start_quiz, primary=True).pack(side="left")
+                        "Карта открывается на выбранное время." if self.phase == "ready" else "Нажимай на ноты — они звучат.",
+                        10, MUTED).pack(anchor="w")
+            if self.phase == "ready":
+                b = self._button(self.action_row,"Повторение ▶",self.start_study,primary=True)
+                b.pack(side="left")
+                Tooltip(b,"Покажет подписанные ноты на выбранное время, затем автоматически начнёт тест.")
+            else:
+                self._button(self.action_row,"Начать тест сейчас →",self.start_quiz,primary=True).pack(side="left")
         elif self.phase == "quiz":
             q = self._current()
             string_name = f"{STRINGS[q.row][0]}-я струна ({self._note_name(self._pitch_class(q.row, 0))})"
@@ -691,22 +1002,30 @@ class NoteTrainer:
                 label = "Показать итог  →" if self.index + 1 == len(self.questions) else "Следующий вопрос  →"
                 self._button(self.action_row, label, self.next_question, primary=True).pack(side="right", padx=(12, 0))
             else:
-                self._button(self.action_row, "Показать учебную карту", self.show_map).pack(side="left")
+                self._button(self.action_row, "Завершить без сохранения", self.abort_quiz).pack(side="left")
         else:
             total = len(self.questions)
             self.quiz_heading.config(text=f"Тест завершён  ·  {self.correct} / {total}")
             if self.mistakes:
                 self._label(self.quiz_body, "Стоит повторить:", 11, AMBER, True).pack(anchor="w")
-                for mistake in self.mistakes[:8]:
-                    self._label(self.quiz_body, "• " + mistake, 10, TEXT).pack(anchor="w", pady=2)
-                if len(self.mistakes) > 8:
-                    self._label(self.quiz_body, f"…и ещё {len(self.mistakes) - 8} ошибок.",
+                for mistake in self.mistakes[:5]:
+                    self._label(self.quiz_body, "• " + mistake, 10, TEXT, wraplength=700, justify="left").pack(anchor="w", pady=2)
+                if len(self.mistakes) > 5:
+                    self._label(self.quiz_body, f"…и ещё {len(self.mistakes) - 5} ошибок.",
                                 10, MUTED).pack(anchor="w")
             else:
                 self._label(self.quiz_body, "Все ответы правильные. Попробуй больше ладов или струн!",
                             12, GREEN, True).pack(anchor="w")
-            self._button(self.action_row, "Повторить карту", self.show_map).pack(side="left", padx=(0, 8))
-            self._button(self.action_row, "Новый тест  →", self.start_quiz, primary=True).pack(side="left")
+            if self.current_run:
+                stats = run_statistics(self.current_run)
+                self._label(self.quiz_body,
+                            f"Точность: {stats['accuracy_percent']}% · Среднее: {stats['mean_seconds']} с · Медиана: {stats['median_seconds']} с",
+                            11, ACCENT, True).pack(anchor="w", pady=(8,0))
+            exp = self._button(self.action_row, "Export Results", self.export_current, primary=True)
+            exp.pack(side="left",padx=(0,8))
+            Tooltip(exp,"Копирует JSON-отчёт этого теста в буфер обмена для Ctrl+V в ChatGPT.")
+            self._button(self.action_row, "История", self.open_history).pack(side="left",padx=(0,8))
+            self._button(self.action_row, "Повторить", self.show_map).pack(side="left",padx=(0,8))
 
 
 def main() -> None:
