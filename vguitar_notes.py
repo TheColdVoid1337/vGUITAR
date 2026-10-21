@@ -253,6 +253,7 @@ class NoteTrainer:
         self.feedback_is_correct = False
         self.study_message = "Выбери область и запусти повторение."
         self._chosen_pc: Optional[int] = None
+        self.cell_width = CELL_W
         self.answer_wheel_regions: dict[int, tuple[float, float, float]] = {}
 
         self._create_layout()
@@ -342,32 +343,30 @@ class NoteTrainer:
         menu.add_command(label="Справка", command=self.open_help)
         self.root.config(menu=menu)
 
-        header = tk.Frame(self.outer, bg=BG)
-        header.pack(fill="x", padx=12, pady=(5, 4))
-        self._label(header, "vGUITAR", 16, ACCENT, True, bg=BG).pack(side="left")
-        self._label(header, "  NOTE TRAINER", 10, MUTED, True, bg=BG).pack(side="left")
-        b = self._button(header, "История", self.open_history, compact=True)
-        b.pack(side="right")
-        Tooltip(b, "Результаты прошлых тестов и экспорт нескольких запусков.")
-
-        settings = tk.Frame(self.outer, bg=PANEL, padx=9, pady=5,
-                            highlightbackground=BORDER, highlightthickness=1)
-        settings.pack(fill="x", padx=12, pady=(0, 5))
-        line1 = tk.Frame(settings, bg=PANEL)
-        line1.pack(fill="x")
-        self.strings_value = self._counter(line1, "Струны", "strings", 1, 6)
-        self.frets_value = self._counter(line1, "Лады", "frets", 1, 24)
-        self.questions_value = self._counter(line1, "Вопросы", "questions", 5, 100, step=5)
-        self.study_value = self._counter(line1, "Повтор, с", "study", 10, 300, step=10)
-        line2 = tk.Frame(settings, bg=PANEL)
-        line2.pack(fill="x", pady=(4, 0))
-        self._label(line2, "Тест:", 9, MUTED).pack(side="left", padx=(0, 8))
+        toolbar = tk.Frame(self.outer, bg=PANEL, padx=9, pady=6,
+                           highlightbackground=BORDER, highlightthickness=1)
+        toolbar.pack(fill="x", padx=10, pady=(7, 5))
+        self.toolbar = toolbar
+        self.brand = tk.Frame(toolbar, bg=PANEL)
+        self._label(self.brand, "vGUITAR", 14, ACCENT, True).pack(side="left")
+        self._label(self.brand, "  NOTES", 9, MUTED, True).pack(side="left")
+        self.counter_strip = tk.Frame(toolbar, bg=PANEL)
+        self.strings_value = self._counter(self.counter_strip, "Струны", "strings", 1, 6)
+        self.frets_value = self._counter(self.counter_strip, "Лады", "frets", 1, 24)
+        self.questions_value = self._counter(self.counter_strip, "Вопросы", "questions", 5, 100, step=5)
+        self.study_value = self._counter(self.counter_strip, "Повтор", "study", 10, 300, step=10)
+        self.mode_strip = tk.Frame(toolbar, bg=PANEL)
         self.mode_buttons: dict[str, tk.Button] = {}
-        for mode, title in (("name", "Назвать ноту"), ("find", "Найти на грифе")):
-            btn = self._button(line2, title, lambda m=mode: self.change_mode(m), compact=True)
-            btn.pack(side="left", padx=(0, 4))
+        for mode, title in (("name", "Назвать"), ("find", "Найти")):
+            btn = self._button(self.mode_strip, title, lambda m=mode: self.change_mode(m), compact=True)
+            btn.pack(side="left", padx=(0, 3))
             self.mode_buttons[mode] = btn
-        self._label(line2, "Активные: от 6-й к 1-й", 9, FAINT).pack(side="right")
+            Tooltip(btn, "Назвать ноту на указанном ладу." if mode == "name" else
+                    "Найти указанную ноту на нужной струне.")
+        self.history_button = self._button(toolbar, "История", self.open_history, compact=True)
+        Tooltip(self.history_button, "Результаты прошлых тестов и экспорт выбранных запусков.")
+        self._toolbar_layout = None
+        self._layout_toolbar(self.root.winfo_width())
 
         self.content_area = tk.Frame(self.outer, bg=BG)
         self.content_area.pack(fill="both", expand=True, padx=12, pady=(0, 5))
@@ -396,6 +395,7 @@ class NoteTrainer:
         hbar.pack(fill="x")
         self.board.configure(xscrollcommand=hbar.set)
         self.board.bind("<Button-1>", self._click_board)
+        self.board.bind("<Configure>", self._board_resized)
         Tooltip(self.board, "0 — открытая струна. В повторении щёлкни по ноте, чтобы услышать её.")
 
         quiz_card = tk.Frame(self.content_area, bg=PANEL, padx=9, pady=5,
@@ -430,10 +430,43 @@ class NoteTrainer:
 
     def _resize_main(self, event) -> None:
         if event.widget is self.root:
+            self._layout_toolbar(event.width)
             self._layout_content()
 
+    def _layout_toolbar(self, width: int) -> None:
+        # Fully single-row on wide windows; compact 2-3 rows on narrow ones.
+        mode = "wide" if width >= 940 else "medium" if width >= 790 else "small"
+        if mode == self._toolbar_layout:
+            return
+        self._toolbar_layout = mode
+        for widget in (self.brand, self.counter_strip, self.mode_strip, self.history_button):
+            widget.grid_forget()
+        for row in range(3):
+            self.toolbar.grid_rowconfigure(row, weight=0)
+        for col in range(4):
+            self.toolbar.grid_columnconfigure(col, weight=0)
+        if mode == "wide":
+            self.toolbar.grid_columnconfigure(3, weight=1)
+            self.brand.grid(row=0, column=0, sticky="w", padx=(0, 15))
+            self.counter_strip.grid(row=0, column=1, sticky="w", padx=(0, 12))
+            self.mode_strip.grid(row=0, column=2, sticky="w")
+            self.history_button.grid(row=0, column=3, sticky="e")
+        elif mode == "medium":
+            self.toolbar.grid_columnconfigure(1, weight=1)
+            self.brand.grid(row=0, column=0, sticky="w")
+            self.mode_strip.grid(row=0, column=1, sticky="e", padx=(10, 8))
+            self.history_button.grid(row=0, column=2, sticky="e")
+            self.counter_strip.grid(row=1, column=0, columnspan=3, sticky="w", pady=(3, 0))
+        else:
+            self.toolbar.grid_columnconfigure(1, weight=1)
+            self.brand.grid(row=0, column=0, sticky="w")
+            self.mode_strip.grid(row=0, column=1, sticky="e")
+            self.history_button.grid(row=0, column=2, sticky="e", padx=(6, 0))
+            self.counter_strip.grid(row=1, column=0, columnspan=3, sticky="w", pady=(3, 0))
+
     def _layout_content(self) -> None:
-        orientation = "side" if self.root.winfo_height() < 708 else "stack"
+        width, height = self.root.winfo_width(), self.root.winfo_height()
+        orientation = "side" if height < 710 or width >= 1250 else "stack"
         if orientation == self._responsive_orientation:
             return
         self._responsive_orientation = orientation
@@ -442,18 +475,20 @@ class NoteTrainer:
         self.quiz_card.grid_forget()
         for index in (0, 1):
             area.grid_rowconfigure(index, weight=0, minsize=0)
-            area.grid_columnconfigure(index, weight=0, minsize=0)
+            # Unset the former uniform group: it otherwise reserves an invisible
+            # second column and leaves a huge blank area on the right.
+            area.grid_columnconfigure(index, weight=0, minsize=0, uniform="")
         if orientation == "side":
-            area.grid_columnconfigure(0, weight=1, uniform="columns")
-            area.grid_columnconfigure(1, weight=1, uniform="columns")
+            area.grid_columnconfigure(0, weight=1)
+            area.grid_columnconfigure(1, weight=1)
             area.grid_rowconfigure(0, weight=1)
-            self.board_card.grid(row=0,column=0,sticky="nsew",padx=(0,3))
-            self.quiz_card.grid(row=0,column=1,sticky="nsew",padx=(3,0))
+            self.board_card.grid(row=0, column=0, sticky="nsew", padx=(0, 3))
+            self.quiz_card.grid(row=0, column=1, sticky="nsew", padx=(3, 0))
         else:
             area.grid_columnconfigure(0, weight=1)
             area.grid_rowconfigure(1, weight=1)
-            self.board_card.grid(row=0,column=0,sticky="ew",pady=(0,5))
-            self.quiz_card.grid(row=1,column=0,sticky="nsew")
+            self.board_card.grid(row=0, column=0, sticky="ew", pady=(0, 5))
+            self.quiz_card.grid(row=1, column=0, sticky="nsew")
 
     def _on_close(self) -> None:
         self._cancel_study_timer()
@@ -574,13 +609,13 @@ class NoteTrainer:
     def _counter(self, parent: tk.Widget, label: str, kind: str,
                  minimum: int, maximum: int, step: int = 1) -> tk.Label:
         box = tk.Frame(parent, bg=PANEL)
-        box.pack(side="left", padx=(0, 14))
+        box.pack(side="left", padx=(0, 7))
         row = tk.Frame(box, bg=PANEL)
         row.pack(anchor="w")
-        self._label(row, label, 9, MUTED).pack(side="left", padx=(0, 5))
+        self._label(row, label, 9, MUTED).pack(side="left", padx=(0, 3))
         self._button(row, "−", lambda: self.change_setting(kind, -step), compact=True).pack(side="left")
-        value = self._label(row, "", 10, TEXT, True, width=3)
-        value.pack(side="left", padx=2)
+        value = self._label(row, "", 10, TEXT, True, width=2)
+        value.pack(side="left", padx=1)
         self._button(row, "+", lambda: self.change_setting(kind, step), compact=True).pack(side="left")
         Tooltip(box, {"strings": "Струны активируются от толстой шестой к тонкой первой.",
                       "frets": "Диапазон 0–N, включая открытую струну.",
@@ -755,7 +790,7 @@ class NoteTrainer:
 
     def _click_board(self, event: tk.Event) -> None:
         x = self.board.canvasx(event.x)
-        fret = int(x // CELL_W)
+        fret = int(x // self.cell_width)
         row = int((event.y - TOP) // ROW_H)
         if not (0 <= fret <= self.active_frets and 0 <= row < 6 and self._active(row)):
             return
@@ -926,19 +961,30 @@ class NoteTrainer:
             selected = (mode == self.mode)
             btn.config(bg=ACCENT if selected else BUTTON_BG,
                        fg="#072139" if selected else TEXT)
+        if self.board.winfo_width() > 1:
+            self.cell_width = max(CELL_W, min(120, self.board.winfo_width() // (self.active_frets + 1)))
         self._draw_board()
         self._update_quiz_ui()
+
+    def _board_resized(self, event) -> None:
+        usable = max(1, int(event.width))
+        count = self.active_frets + 1
+        # Never compress below the readable default; expand to use space instead.
+        desired = max(CELL_W, min(120, usable // count))
+        if desired != self.cell_width:
+            self.cell_width = desired
+            self._draw_board()
 
     def _draw_board(self) -> None:
         self.board.delete("all")
         self.string_labels.delete("all")
-        width = (self.active_frets + 1) * CELL_W
+        width = (self.active_frets + 1) * self.cell_width
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
         self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ")
         self.board_hint.config(text=f"{self.active_strings}/6 струн · 0–{self.active_frets}")
         for fret in range(self.active_frets + 1):
-            x0 = fret * CELL_W
-            self.board.create_text(x0 + CELL_W / 2, 12, text=str(fret),
+            x0 = fret * self.cell_width
+            self.board.create_text(x0 + self.cell_width / 2, 12, text=str(fret),
                                    fill=MUTED, font=(FONT, 10, "bold"))
         for row, (num, letter, ru, base_pc) in enumerate(STRINGS):
             pc_open = self._pitch_class(row, 0)
@@ -954,17 +1000,17 @@ class NoteTrainer:
                                            anchor="w", fill=MUTED if active else FAINT,
                                            font=(FONT, 8))
             for fret in range(self.active_frets + 1):
-                x0 = fret * CELL_W
+                x0 = fret * self.cell_width
                 color = (CELL_ACTIVE if fret % 2 == 0 else CELL_ACTIVE_ALT) if active else (
                     CELL_INACTIVE if fret % 2 == 0 else CELL_INACTIVE_ALT)
-                self.board.create_rectangle(x0, y0, x0 + CELL_W, y0 + ROW_H,
+                self.board.create_rectangle(x0, y0, x0 + self.cell_width, y0 + ROW_H,
                                             fill=color, outline=BORDER if active else "#27313e",
                                             width=1)
                 if fret == 0:
-                    self.board.create_rectangle(x0 + CELL_W - 3, y0,
-                                                x0 + CELL_W, y0 + ROW_H,
+                    self.board.create_rectangle(x0 + self.cell_width - 3, y0,
+                                                x0 + self.cell_width, y0 + ROW_H,
                                                 fill=TEXT if active else FAINT, outline="")
-                self.board.create_line(x0 + 7, ymid, x0 + CELL_W - 7, ymid,
+                self.board.create_line(x0 + 7, ymid, x0 + self.cell_width - 7, ymid,
                                        fill=blend_hex("#b4d5e4", color, .45 if active else .13),
                                        width=max(1, 4 - row // 2))
                 pc = self._pitch_class(row, fret)
@@ -979,33 +1025,33 @@ class NoteTrainer:
                         show_note = True
                 if show_note:
                     highlight = self.phase == "quiz" and self.checked
-                    self.board.create_oval(x0 + 13, ymid - 14, x0 + CELL_W - 13, ymid + 14,
+                    self.board.create_oval(x0 + 13, ymid - 14, x0 + self.cell_width - 13, ymid + 14,
                                            fill="#236e70" if highlight else "#2b607f",
                                            outline=GREEN if highlight else "#4b9abd", width=1)
-                    self.board.create_text(x0 + CELL_W / 2, ymid - 5, text=self._note_name(pc),
+                    self.board.create_text(x0 + self.cell_width / 2, ymid - 5, text=self._note_name(pc),
                                            fill=TEXT, font=(FONT, 10, "bold"))
-                    self.board.create_text(x0 + CELL_W / 2, ymid + 8, text=self._note_ru(pc),
+                    self.board.create_text(x0 + self.cell_width / 2, ymid + 8, text=self._note_ru(pc),
                                            fill="#c8e3ef", font=(FONT, 7))
                 elif is_target:
-                    self.board.create_oval(x0 + 14, ymid - 14, x0 + CELL_W - 14, ymid + 14,
+                    self.board.create_oval(x0 + 14, ymid - 14, x0 + self.cell_width - 14, ymid + 14,
                                            fill="#245879", outline=ACCENT, width=2)
-                    self.board.create_text(x0 + CELL_W / 2, ymid, text="?",
+                    self.board.create_text(x0 + self.cell_width / 2, ymid, text="?",
                                            fill=TEXT, font=(FONT, 14, "bold"))
                 if active and self.phase == "quiz" and self.mode == "find":
                     q = self._current()
                     if row == q.row and not self.checked:
-                        self.board.create_rectangle(x0 + 3, y0 + 3, x0 + CELL_W - 3,
+                        self.board.create_rectangle(x0 + 3, y0 + 3, x0 + self.cell_width - 3,
                                                     y0 + ROW_H - 3, outline="#4188ad", width=2)
                     if self.checked and row == q.row and fret == self.guess_fret:
-                        self.board.create_rectangle(x0 + 2, y0 + 2, x0 + CELL_W - 2,
+                        self.board.create_rectangle(x0 + 2, y0 + 2, x0 + self.cell_width - 2,
                                                     y0 + ROW_H - 2,
                                                     outline=GREEN if self.feedback_is_correct else RED,
                                                     width=3)
         if self.phase == "quiz":
             q = self._current()
-            x0 = q.fret * CELL_W
+            x0 = q.fret * self.cell_width
             if self.mode == "name":
-                self.board.xview_moveto(max(0, x0 - 2 * CELL_W) / max(width, 1))
+                self.board.xview_moveto(max(0, x0 - 2 * self.cell_width) / max(width, 1))
             # In 'find' mode don't reveal the target fret by auto-scrolling.
 
     def _clear(self, parent: tk.Widget) -> None:
@@ -1043,56 +1089,67 @@ class NoteTrainer:
         return button
 
     @staticmethod
-    def _circle_points(width: int, height: int) -> dict[int, tuple[float,float,float]]:
-        """Natural pitches on an outer heptagon; accidentals in its gaps inside."""
+    def _circle_geometry(width: int, height: int) -> tuple[float, float, float, float]:
         cx, cy = width / 2, height / 2
-        outer_r = max(32, min(width / 2 - 24, height / 2 - 22, 87))
-        inner_r = outer_r * .56
+        outer = max(20.0, min(125.0, (width/2 - 8)/1.23, (height/2 - 8)/1.23))
+        natural_size = max(8.0, min(22.0, outer * .21))
+        sharp_size = max(6.0, min(16.0, outer * .155))
+        inner = outer - natural_size - sharp_size - max(5.0, outer * .08)
+        return cx, cy, outer, inner
+
+    @staticmethod
+    def _circle_points(width: int, height: int) -> dict[int, tuple[float,float,float]]:
+        """Seven naturals outside; every sharp aligned directly beneath its natural."""
+        cx, cy, outer, inner = NoteTrainer._circle_geometry(width, height)
         natural = (0, 2, 4, 5, 7, 9, 11)
-        positions = {}
-        for i, pitch in enumerate(natural):
+        sharps = {0:1, 2:3, 5:6, 7:8, 9:10}
+        result = {}
+        for i, pc in enumerate(natural):
             angle = -math.pi / 2 + 2 * math.pi * i / 7
-            positions[pitch] = (cx + outer_r * math.cos(angle),
-                                cy + outer_r * math.sin(angle), min(17,outer_r*.23))
-        accidentals = {0:1, 1:3, 3:6, 4:8, 5:10}
-        for pos, pitch in accidentals.items():
-            angle = -math.pi / 2 + 2 * math.pi * (pos + .5) / 7
-            positions[pitch] = (cx + inner_r * math.cos(angle),
-                                cy + inner_r * math.sin(angle), min(15,outer_r*.18))
-        return positions
+            direction = (math.cos(angle), math.sin(angle))
+            result[pc] = (cx + outer * direction[0],
+                          cy + outer * direction[1], max(8.0, min(22.0, outer * .21)))
+            if pc in sharps:
+                result[sharps[pc]] = (cx + inner * direction[0],
+                                      cy + inner * direction[1], max(6.0, min(16.0, outer * .155)))
+        return result
 
     def _render_circle_answers(self, parent: tk.Widget, target_pc: int) -> None:
-        canvas = tk.Canvas(parent, height=190, bg=PANEL, highlightthickness=0,
+        canvas = tk.Canvas(parent, height=245, bg=PANEL, highlightthickness=0,
                            cursor="hand2")
         canvas.pack(fill="both", expand=True)
         self._answer_wheel = canvas
+
         def draw(event=None):
-            width = max(canvas.winfo_width(), 190)
-            height = max(canvas.winfo_height(), 125)
+            width, height = max(canvas.winfo_width(), 180), max(canvas.winfo_height(), 190)
             canvas.delete("all")
             self.answer_wheel_regions = self._circle_points(width, height)
-            cx, cy = width / 2, height / 2
-            outer = max(32, min(width/2-24, height/2-22, 87))
-            for radius in (outer, outer*.56):
-                canvas.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,
+            cx, cy, outer, inner = self._circle_geometry(width, height)
+            for radius in (outer, inner):
+                canvas.create_oval(cx-radius, cy-radius, cx+radius, cy+radius,
                                    outline=BORDER, width=1)
-            canvas.create_text(cx,cy,text="♮  /  ♯",fill=FAINT,font=(FONT,10))
-            for pc,(x,y,r) in self.answer_wheel_regions.items():
+            # Short spokes link C-C♯, D-D♯, F-F♯, G-G♯, A-A♯.
+            for base, sharp in ((0,1), (2,3), (5,6), (7,8), (9,10)):
+                bx, by, br = self.answer_wheel_regions[base]
+                sx, sy, sr = self.answer_wheel_regions[sharp]
+                canvas.create_line(bx, by, sx, sy, fill="#36536a", width=2)
+            for pc, (x, y, r) in self.answer_wheel_regions.items():
                 natural = pc in (0,2,4,5,7,9,11)
                 fill = BUTTON_BG if natural else "#224055"
                 outline = BORDER
                 if self.checked:
                     if pc == target_pc:
-                        fill, outline = "#27765e",GREEN
+                        fill, outline = "#27765e", GREEN
                     elif pc == self._chosen_pc:
                         fill, outline = "#813f43", RED
                     else:
                         fill = CELL_INACTIVE
-                canvas.create_oval(x-r,y-r,x+r,y+r, fill=fill,
-                                   outline=outline,width=2 if pc==target_pc and self.checked else 1)
-                canvas.create_text(x,y,text=self._note_name(pc), fill=TEXT if not self.checked or pc in (target_pc,self._chosen_pc) else FAINT,
-                                   font=(FONT,11 if natural else 9,"bold"))
-        canvas.bind("<Configure>",draw)
+                canvas.create_oval(x-r, y-r, x+r, y+r, fill=fill,
+                                   outline=outline, width=2 if pc==target_pc and self.checked else 1)
+                canvas.create_text(x, y, text=self._note_name(pc),
+                                   fill=TEXT if not self.checked or pc in (target_pc, self._chosen_pc) else FAINT,
+                                   font=(FONT, 12 if natural else 9, "bold"))
+        canvas.bind("<Configure>", draw)
         def clicked(event):
             if self.checked:
                 return
@@ -1100,7 +1157,7 @@ class NoteTrainer:
                 if (event.x-x)**2 + (event.y-y)**2 <= (r+2)**2:
                     self.answer_name(pc)
                     return
-        canvas.bind("<Button-1>",clicked)
+        canvas.bind("<Button-1>", clicked)
         draw()
 
     def _update_quiz_ui(self) -> None:

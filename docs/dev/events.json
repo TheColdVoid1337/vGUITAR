@@ -598,6 +598,61 @@
       "path": "docs/dev/events.json",
       "detail": "Record exact verified v0.4.0 source commit SHA in canonical event journal; docs freeze remains in effect",
       "related_commit": "5cfd920e5bfbd90804c325b9ed46c4d1790ccecd"
+    },
+    {
+      "id": "VG-20261021-0072",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "35 unittest passed; GUI smoke passed; layout verified at 680x575, 780x650, 1024x768, 1280x720, 1366x768 and 1583x842; no GitHub Actions"
+    },
+    {
+      "id": "VG-20261021-0073",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+    },
+    {
+      "id": "VG-20261021-0074",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+    },
+    {
+      "id": "VG-20261021-0075",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/test_answer_layout.py",
+      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+    },
+    {
+      "id": "VG-20261021-0076",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/gui_smoke.py",
+      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+    },
+    {
+      "id": "VG-20261021-0077",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/gui_layout_smoke.py",
+      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+    },
+    {
+      "id": "VG-20261021-0078",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "Atomic GUI fix and dev ledger update; source and tests only, no frozen documentation"
     }
   ]
 }

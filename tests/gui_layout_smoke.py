@@ -20,7 +20,7 @@ with tempfile.TemporaryDirectory() as folder:
     app=NoteTrainer(root)
     app.audio.play=MagicMock(return_value=True)
     failures=[]
-    for w,h in ((680,575),(780,650),(1024,768)):
+    for w,h in ((680,575),(780,650),(1024,768),(1280,720),(1366,768),(1583,842)):
         root.geometry(f'{w}x{h}+0+0')
         root.update()
         for phase, layout in (('ready','rows'), ('quiz','rows'),('quiz','circle'),('result','rows')):
@@ -38,6 +38,15 @@ with tempfile.TemporaryDirectory() as folder:
             y_bottom=app.action_row.winfo_rooty()+app.action_row.winfo_height()-root.winfo_rooty()
             footer_bottom=app.status_label.winfo_rooty()+app.status_label.winfo_height()-root.winfo_rooty()
             right=max(app.quiz_heading.winfo_rootx()+app.quiz_heading.winfo_width(),app.action_row.winfo_rootx()+app.action_row.winfo_width())-root.winfo_rootx()
+            # Regression: no phantom empty grid column, all cards fill the work area.
+            work_left=app.content_area.winfo_rootx()
+            work_right=work_left+app.content_area.winfo_width()
+            panels_right=max(app.board_card.winfo_rootx()+app.board_card.winfo_width(),
+                             app.quiz_card.winfo_rootx()+app.quiz_card.winfo_width())
+            if abs(panels_right-work_right)>8:
+                failures.append((w,h,phase,layout,'unused-right-space',work_right-panels_right))
+            if app.toolbar.winfo_rootx()+app.toolbar.winfo_width()>root.winfo_rootx()+w+2:
+                failures.append((w,h,phase,layout,'toolbar-oversized'))
             if y_bottom>h-15 or footer_bottom>h or right>w:
                 failures.append((w,h,phase,layout,y_bottom,footer_bottom,right))
             if ImageGrab is not None:
@@ -61,4 +70,4 @@ with tempfile.TemporaryDirectory() as folder:
     root.destroy()
     if failures:
         raise AssertionError(f'Layout overflow: {failures}')
-    print('LAYOUT OK: 680x575, 780x650, 1024x768; both note layouts; clipboard state intact')
+    print('LAYOUT OK: 680x575, 780x650, 1024x768, 1280x720, 1366x768, 1583x842; both note layouts')
