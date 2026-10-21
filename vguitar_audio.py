@@ -151,7 +151,7 @@ class AudioPlayer:
         if self._backend == "winsound":
             try:
                 import winsound
-                winsound.PlaySound(None, winsound.SND_PURGE)
+                winsound.PlaySound(None, 0)
             except (OSError, RuntimeError):
                 pass
 
