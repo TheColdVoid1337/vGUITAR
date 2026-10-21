@@ -653,6 +653,22 @@
       "status": "success",
       "path": "docs/dev/events.json",
       "detail": "Atomic GUI fix and dev ledger update; source and tests only, no frozen documentation"
+    },
+    {
+      "id": "VG-20261021-0079",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "failed",
+      "path": "vGUITAR_NoteTrainer_v0.4.1.zip",
+      "detail": "Tried to upload ZIP v0.4.1 to designated Drive folder; connector rejected exported file reference (INVALID_ARGUMENT). No Drive asset or index changes were made."
+    },
+    {
+      "id": "VG-20261021-0080",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "Record release upload limitation; canonical docs remain frozen; GitHub commit bb173296 has complete code and tests."
     }
   ]
 }
