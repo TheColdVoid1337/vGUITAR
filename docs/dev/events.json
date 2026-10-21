@@ -436,6 +436,62 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Commit validated v0.3.0 code, tests, ignore rules, version and dev JSON journal without GitHub Actions"
+    },
+    {
+      "id": "VG-20261021-0052",
+      "date": "2026-10-21",
+      "action": "github.update_ref",
+      "status": "success",
+      "path": "main",
+      "detail": "Published v0.3.0 on main; commit 44228e8b3edbaf9c3a2ea049b61689b0d54e9b15"
+    },
+    {
+      "id": "VG-20261021-0053",
+      "date": "2026-10-21",
+      "action": "github.verify",
+      "status": "success",
+      "path": "main",
+      "detail": "Readback confirmed VERSION.json=0.3.0, vguitar_storage.py and /settings/ /results/ ignores"
+    },
+    {
+      "id": "VG-20261021-0054",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "success",
+      "path": "vGUITAR_NoteTrainer_v0.3.0.zip",
+      "detail": "Uploaded v0.3.0 release ZIP (19,704 bytes; SHA256 689947951058c53044f92b8ff74b76b9a7a0eda3417cb2ec205d1af95d070458)"
+    },
+    {
+      "id": "VG-20261021-0055",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "path": "file_index.json",
+      "detail": "Updated existing index in place (4 records), retained same Google Drive file ID"
+    },
+    {
+      "id": "VG-20261021-0056",
+      "date": "2026-10-21",
+      "action": "drive.delete_file",
+      "status": "success",
+      "path": "_TEMP_vGUITAR_commit_transfer",
+      "detail": "Removed temporary GitHub commit transfer file after successful push"
+    },
+    {
+      "id": "VG-20261021-0057",
+      "date": "2026-10-21",
+      "action": "drive.delete_file",
+      "status": "success",
+      "path": "_TEMP_vGUITAR_index_v0_3",
+      "detail": "Removed temporary index transfer file after index updated"
+    },
+    {
+      "id": "VG-20261021-0058",
+      "date": "2026-10-21",
+      "action": "project.release",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.3.0 complete; user preferences and quiz results remain local only, docs freeze unchanged"
     }
   ]
 }
