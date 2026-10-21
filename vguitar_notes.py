@@ -591,14 +591,36 @@ class NoteTrainer:
 
         self._button(bottom, "Сохранить", apply_settings, primary=True).pack(side="right")
         self._button(bottom, "Отмена", window.destroy).pack(side="right", padx=8)
-        self._button(bottom, "♫ Проверить звук", lambda: self._preview_audio(
-            note_choices.index(midi_values[5].get()) + 24, volume.get())).pack(side="left")
+        test_btn = self._button(bottom, "♫ Тест", lambda: self._preview_audio(
+            note_choices.index(midi_values[5].get()) + 24, volume.get()), compact=True)
+        test_btn.pack(side="left")
+        Tooltip(test_btn, "Сыграть шестую струну. Через 2 секунды появится диагностика.")
+        log_btn = self._button(bottom, "Лог звука", self._copy_audio_diagnostic, compact=True)
+        log_btn.pack(side="left", padx=(5, 0))
+        Tooltip(log_btn, "Скопировать состояние аудиосистемы для разбора проблем.")
+
+    def _copy_audio_diagnostic(self) -> None:
+        self._copy_text("vGUITAR_AUDIO_DIAGNOSTIC\n" + self.audio.diagnostic())
 
     def _preview_audio(self, midi_note: int, volume: int) -> None:
         previous = self.audio.volume
         self.audio.volume = volume
-        self.audio.play(midi_note)
+        started = self.audio.play(midi_note)
         self.audio.volume = previous
+        if not started:
+            messagebox.showwarning("Проверка звука", self.audio.diagnostic(), parent=self._settings_window)
+            return
+        # The worker may report a native device error after play() returns.
+        def report() -> None:
+            window = getattr(self, "_settings_window", None)
+            if window is None or not window.winfo_exists():
+                return
+            status = self.audio.diagnostic()
+            lead = ("Плеер сообщил об ошибке. Нажми «Лог звука» и пришли его в чат."
+                    if self.audio.last_result == "error"
+                    else "Если звук не слышен, проверь микшер Windows и устройство вывода, затем пришли «Лог звука».")
+            messagebox.showinfo("Проверка звука", lead + "\n\n" + status, parent=window)
+        self.root.after(1850, report)
 
     def page_scroll(self, units: int) -> None:
         return  # The main window deliberately has no vertical scrolling.

@@ -669,6 +669,77 @@
       "status": "success",
       "path": "docs/dev/events.json",
       "detail": "Record release upload limitation; canonical docs remain frozen; GitHub commit bb173296 has complete code and tests."
+    },
+    {
+      "id": "VG-20261021-0081",
+      "date": "2026-10-21",
+      "action": "user.report",
+      "status": "observed",
+      "detail": "v0.4.1: Windows sound absent while fretboard test succeeded; user supplied run export 5/5 on string 6",
+      "path": "vguitar_audio.py"
+    },
+    {
+      "id": "VG-20261021-0082",
+      "date": "2026-10-21",
+      "action": "local.implement",
+      "status": "success",
+      "detail": "Native Windows WinMM waveOut PCM output with winsound fallback and copyable diagnostics; preserve musical cue timing",
+      "path": "vguitar_audio.py"
+    },
+    {
+      "id": "VG-20261021-0083",
+      "date": "2026-10-21",
+      "action": "local.implement",
+      "status": "success",
+      "detail": "Add sound test and diagnostic log controls to existing tuning/audio settings; avoid editing frozen docs",
+      "path": "vguitar_notes.py"
+    },
+    {
+      "id": "VG-20261021-0084",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "40 local unit tests (including mocked native Windows API) + GUI smoke + six-size GUI layout smoke; Windows physical audio unverified",
+      "path": "tests/test_audio_backend.py"
+    },
+    {
+      "id": "VG-20261021-0085",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.2 Windows audio reliability patch",
+      "path": "vguitar_audio.py"
+    },
+    {
+      "id": "VG-20261021-0086",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.2 Windows audio reliability patch",
+      "path": "vguitar_notes.py"
+    },
+    {
+      "id": "VG-20261021-0087",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.2 Windows audio reliability patch",
+      "path": "tests/test_audio_backend.py"
+    },
+    {
+      "id": "VG-20261021-0088",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.2 Windows audio reliability patch",
+      "path": "VERSION.json"
+    },
+    {
+      "id": "VG-20261021-0089",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomically publish v0.4.2 WinMM fallback, sound diagnostic UI, test coverage, VERSION and dev journal; docs frozen; GitHub Actions not used"
     }
   ]
 }
