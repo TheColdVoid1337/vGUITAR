@@ -1,15 +1,13 @@
 """Offline guitar-string sound synthesis and system audio playback.
 
-Windows uses native WinMM waveOut PCM first, with winsound as a fallback.
-Other platforms use available system players. No third-party Python modules.
+On Windows uses PortAudio (sounddevice) with WASAPI priority, as in TittyTatter.
+Other platforms retain available OS players. On Windows install sounddevice.
 """
 from __future__ import annotations
 
 import array
-import ctypes
 import io
 import math
-import os
 from pathlib import Path
 import random
 import shutil
@@ -17,8 +15,8 @@ import subprocess
 import sys
 import tempfile
 import threading
-import time
 import wave
+from typing import Any
 
 SAMPLE_RATE = 22050
 
@@ -29,7 +27,8 @@ def midi_frequency(midi_note: int) -> float:
 
 
 def synthesize_string(midi_note: int, volume: float = 0.65,
-                      duration: float = 1.55, buzzing: bool = False) -> bytes:
+                      duration: float = 1.55, buzzing: bool = False,
+                      sample_rate: int = SAMPLE_RATE) -> bytes:
     """Render a deterministic guitar-like pluck / damped fret-buzz as PCM WAV."""
     if not 0 <= midi_note <= 127:
         raise ValueError("MIDI pitch must be 0..127")
@@ -38,18 +37,20 @@ def synthesize_string(midi_note: int, volume: float = 0.65,
     if not 0.1 <= duration <= 5.0:
         raise ValueError("Duration out of range")
 
+    if not 8000 <= sample_rate <= 192000:
+        raise ValueError("Unsupported sample rate")
     freq = midi_frequency(midi_note)
     if buzzing:
         duration = min(duration, 0.60)
-    count = round(SAMPLE_RATE * duration)
+    count = round(sample_rate * duration)
     rng = random.Random(midi_note * 37 + (3 if buzzing else 1))
-    nyquist = SAMPLE_RATE / 2
+    nyquist = sample_rate / 2
     partials = min(12, max(1, int(nyquist // freq) - 1))
     harmonics = [(h, (1.0 / (h ** 1.27)) * (0.75 if h % 4 == 0 else 1.0))
                  for h in range(1, partials + 1)]
     values = array.array('h')
     for i in range(count):
-        t = i / SAMPLE_RATE
+        t = i / sample_rate
         attack = min(1.0, t / 0.004)
         decay = math.exp(-t * (1.50 if freq < 180 else 2.15))
         sample = 0.0
@@ -71,241 +72,258 @@ def synthesize_string(midi_note: int, volume: float = 0.65,
     with wave.open(output, 'wb') as out:
         out.setnchannels(1)
         out.setsampwidth(2)
-        out.setframerate(SAMPLE_RATE)
+        out.setframerate(sample_rate)
         out.writeframes(values.tobytes())
     return output.getvalue()
 
 
+
 class AudioPlaybackError(RuntimeError):
-    """Native audio playback failed; includes WinMM error number when possible."""
+    """Audio driver error with an actionable message for diagnostics."""
 
 
-def _play_waveout(wav: bytes, stop_event: threading.Event) -> None:
-    """Stream PCM through native Windows waveOut. Blocks only a worker thread.
+def find_output_devices(sd: Any) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Prefer WASAPI's default output, then WASAPI speakers, then PortAudio default.
 
-    Unlike SND_ASYNC file playback this path reports native device errors and
-    does not depend on the Windows sound-event configuration or file association.
-    The PCM memory and WAVEHDR stay alive until the driver marks completion.
+    Matches TittyTatter's sounddevice/PortAudio WASAPI device discovery.
+    Returns a list for diagnostics, even when no output is available.
     """
-    if sys.platform != "win32":
-        raise AudioPlaybackError("waveOut requires Windows")
-    from ctypes import wintypes
-
-    class WaveFormatEx(ctypes.Structure):
-        _fields_ = [("wFormatTag", wintypes.WORD),
-                    ("nChannels", wintypes.WORD),
-                    ("nSamplesPerSec", wintypes.DWORD),
-                    ("nAvgBytesPerSec", wintypes.DWORD),
-                    ("nBlockAlign", wintypes.WORD),
-                    ("wBitsPerSample", wintypes.WORD),
-                    ("cbSize", wintypes.WORD)]
-
-    class WaveHeader(ctypes.Structure):
-        _fields_ = [("lpData", ctypes.c_void_p),
-                    ("dwBufferLength", wintypes.DWORD),
-                    ("dwBytesRecorded", wintypes.DWORD),
-                    ("dwUser", ctypes.c_size_t),
-                    ("dwFlags", wintypes.DWORD),
-                    ("dwLoops", wintypes.DWORD),
-                    ("lpNext", ctypes.c_void_p),
-                    ("reserved", ctypes.c_size_t)]
-
-    winmm = ctypes.WinDLL("winmm")
-    winmm.waveOutOpen.argtypes = [ctypes.POINTER(ctypes.c_void_p), ctypes.c_uint,
-                                  ctypes.POINTER(WaveFormatEx), ctypes.c_size_t,
-                                  ctypes.c_size_t, ctypes.c_uint]
-    for name in ("waveOutPrepareHeader", "waveOutWrite", "waveOutUnprepareHeader"):
-        getattr(winmm, name).argtypes = [ctypes.c_void_p,
-                                         ctypes.POINTER(WaveHeader), ctypes.c_uint]
-    winmm.waveOutReset.argtypes = [ctypes.c_void_p]
-    winmm.waveOutClose.argtypes = [ctypes.c_void_p]
-
-    with wave.open(io.BytesIO(wav), "rb") as data:
-        channels, bits, rate = data.getnchannels(), data.getsampwidth() * 8, data.getframerate()
-        pcm = data.readframes(data.getnframes())
-    if channels != 1 or bits != 16:
-        raise AudioPlaybackError("Expected mono 16-bit PCM WAV")
-    fmt = WaveFormatEx(1, channels, rate, rate * channels * (bits // 8),
-                       channels * (bits // 8), bits, 0)
-    handle = ctypes.c_void_p()
-    error = winmm.waveOutOpen(ctypes.byref(handle), 0xFFFFFFFF,
-                              ctypes.byref(fmt), 0, 0, 0)
-    if error:
-        raise AudioPlaybackError(f"waveOutOpen: Windows MMRESULT {error}")
-    prepared = False
+    devices = sd.query_devices()
+    apis = sd.query_hostapis()
+    results: list[dict[str, Any]] = []
+    for i, device in enumerate(devices):
+        if int(device.get('max_output_channels', 0)) < 1:
+            continue
+        host = int(device.get('hostapi', -1))
+        host_name = str(apis[host].get('name', 'unknown')) if 0 <= host < len(apis) else 'unknown'
+        results.append({
+            'index': i, 'name': str(device.get('name', 'unknown')),
+            'hostapi': host_name,
+            'samplerate': int(round(float(device.get('default_samplerate', 48000)))) or 48000,
+            'channels': 2 if int(device.get('max_output_channels', 0)) >= 2 else 1,
+            'wasapi': 'WASAPI' in host_name.upper(),
+        })
+    for host in apis:
+        if 'WASAPI' in str(host.get('name', '')).upper():
+            idx = int(host.get('default_output_device', -1))
+            item = next((x for x in results if x['index'] == idx and x['wasapi']), None)
+            if item:
+                return results, item
+    wasapi = next((x for x in results if x['wasapi']), None)
+    if wasapi:
+        return results, wasapi
     try:
-        pcm_buffer = ctypes.create_string_buffer(pcm)
-        header = WaveHeader(ctypes.cast(pcm_buffer, ctypes.c_void_p),
-                            len(pcm), 0, 0, 0, 0, None, 0)
-        header_size = ctypes.sizeof(header)
-        error = winmm.waveOutPrepareHeader(handle, ctypes.byref(header), header_size)
-        if error:
-            raise AudioPlaybackError(f"waveOutPrepareHeader: Windows MMRESULT {error}")
-        prepared = True
-        error = winmm.waveOutWrite(handle, ctypes.byref(header), header_size)
-        if error:
-            raise AudioPlaybackError(f"waveOutWrite: Windows MMRESULT {error}")
-        duration = len(pcm) / fmt.nAvgBytesPerSec
-        deadline = time.monotonic() + duration + 2.0
-        while not (header.dwFlags & 0x1):  # WHDR_DONE = 0x00000001
-            if stop_event.wait(0.025):
+        idx = int(sd.default.device[1])
+    except (AttributeError, TypeError, ValueError, IndexError):
+        idx = -1
+    fallback = next((x for x in results if x['index'] == idx), None)
+    return results, fallback or (results[0] if results else None)
+
+
+def _stereo_pcm(mono_pcm: bytes, channels: int) -> bytes:
+    """Expand little-endian 16-bit mono to dual-channel PCM without numpy."""
+    if channels == 1:
+        return mono_pcm
+    if channels != 2:
+        raise AudioPlaybackError(f'Unsupported channel count: {channels}')
+    frames = array.array('h')
+    frames.frombytes(mono_pcm)
+    if sys.byteorder != 'little':
+        frames.byteswap()
+    output = array.array('h', (item for sample in frames for item in (sample, sample)))
+    if sys.byteorder != 'little':
+        output.byteswap()
+    return output.tobytes()
+
+
+def play_portaudio_pcm(sd: Any, pcm: bytes, device: dict[str, Any],
+                       stop_event: threading.Event) -> None:
+    """Blocking PortAudio writes in a worker: never blocks Tk's event loop.
+
+    The device's native sample rate is used to avoid WASAPI format mismatch.
+    A new stream per cue avoids process-global Windows mixer configuration.
+    """
+    stream = None
+    try:
+        stream = sd.RawOutputStream(
+            samplerate=device['samplerate'], channels=device['channels'],
+            dtype='int16', device=device['index'], blocksize=0,
+            latency='high',
+        )
+        stream.start()
+        bytes_per_frame = device['channels'] * 2
+        chunk = 1024 * bytes_per_frame
+        for offset in range(0, len(pcm), chunk):
+            if stop_event.is_set():
                 break
-            if time.monotonic() > deadline:
-                raise AudioPlaybackError("waveOut: timeout waiting for playback")
+            stream.write(pcm[offset:offset + chunk])
+        if stop_event.is_set():
+            stream.abort()
+        else:
+            stream.stop()  # Drain the final queued frames before reporting played.
     finally:
-        # Reset makes the header safe to unprepare even when playback interrupted.
-        winmm.waveOutReset(handle)
-        if prepared:
-            winmm.waveOutUnprepareHeader(handle, ctypes.byref(header), ctypes.sizeof(header))
-        winmm.waveOutClose(handle)
+        if stream is not None:
+            stream.close()
 
 
 class AudioPlayer:
-    """Non-blocking sound cues with inspectable playback status."""
+    """Nonblocking audio with WASAPI device discovery and truthful diagnostics."""
 
     def __init__(self, volume: int = 65) -> None:
         self.volume = max(0, min(100, int(volume)))
-        self._dir = tempfile.TemporaryDirectory(prefix="vguitar_audio_")
-        self._file = Path(self._dir.name) / "note.wav"
-        self._process = None
         self._stop_event: threading.Event | None = None
         self._worker: threading.Thread | None = None
-        self._backend = self._select_backend()
-        self.last_error = "" if self._backend else "Нет доступного аудиоплеера"
-        self.last_result = "idle"
-        self.last_used_backend = self._backend or "none"
+        self._process: subprocess.Popen | None = None
+        self._backend = None
+        self._sd = None
+        self._device: dict[str, Any] | None = None
+        self.device_name = 'none'
+        self.host_api_name = 'none'
+        self.available_devices: list[dict[str, Any]] = []
+        self.last_used_backend = 'none'
+        self.last_result = 'idle'
+        self.last_error = ''
+        self._lock = threading.Lock()
+        self._init_backend()
 
-    @staticmethod
-    def _select_backend() -> str | None:
-        if sys.platform == "win32":
+    def _init_backend(self) -> None:
+        if sys.platform == 'win32':
             try:
-                ctypes.WinDLL("winmm")
-                return "waveout"
-            except (OSError, AttributeError):
-                try:
-                    import winsound  # noqa: F401
-                    return "winsound"
-                except ImportError:
-                    return None
-        if sys.platform == "darwin" and shutil.which("afplay"):
-            return "afplay"
-        for name in ("ffplay", "paplay", "aplay"):
-            if shutil.which(name):
-                return name
-        return None
+                import sounddevice as sd
+            except (ImportError, OSError) as exc:
+                self.last_error = f'sounddevice/PortAudio unavailable: {exc}. Run RUN.bat or pip install -r requirements.txt'
+                return
+            self._sd = sd
+            try:
+                self.available_devices, self._device = find_output_devices(sd)
+            except Exception as exc:
+                self.last_error = f'Cannot enumerate PortAudio devices: {exc}'
+                return
+            if self._device is None:
+                self.last_error = 'PortAudio found no output device; check Windows Sound settings'
+                return
+            self.device_name = self._device['name']
+            self.host_api_name = self._device['hostapi']
+            self._backend = 'wasapi' if self._device['wasapi'] else 'portaudio'
+            self.last_used_backend = self._backend
+            return
+        if sys.platform == 'darwin' and shutil.which('afplay'):
+            self._backend = 'afplay'
+        else:
+            self._backend = next((name for name in ('ffplay', 'paplay', 'aplay')
+                                  if shutil.which(name)), None)
+        self.last_used_backend = self._backend or 'none'
+        if self._backend is None:
+            self.last_error = 'No system audio player found'
 
     @property
     def available(self) -> bool:
         return self._backend is not None
 
     def diagnostic(self) -> str:
-        """Short text suitable for copying into a troubleshooting chat."""
-        device_count = "n/a"
-        if sys.platform == "win32":
-            try:
-                device_count = str(ctypes.WinDLL("winmm").waveOutGetNumDevs())
-            except (OSError, AttributeError):
-                device_count = "unknown"
-        return (f"platform={sys.platform}; backend={self._backend or 'none'}; "
-                f"used={self.last_used_backend}; devices={device_count}; "
-                f"volume={self.volume}; result={self.last_result}; "
-                f"error={self.last_error or 'none'}")
+        selected = self._device
+        device_desc = ('n/a' if selected is None else
+                       f"{selected['index']}:{selected['name']} ({selected['hostapi']}, "
+                       f"{selected['samplerate']} Hz, {selected['channels']}ch)")
+        detected = ', '.join(f"{d['index']}:{d['name']} [{d['hostapi']}]"
+                             for d in self.available_devices)
+        return (f'platform={sys.platform}; backend={self._backend or "none"}; '
+                f'used={self.last_used_backend}; device={device_desc}; '
+                f'outputs={detected or "none"}; volume={self.volume}; '
+                f'result={self.last_result}; error={self.last_error or "none"}')
 
-    def _winsound(self, wav: bytes) -> None:
-        import winsound
-        # A new WAV filename avoids racing a still-open async previous sound.
-        path = Path(self._dir.name) / f"cue_{time.monotonic_ns()}.wav"
-        path.write_bytes(wav)
-        winsound.PlaySound(str(path), winsound.SND_FILENAME |
-                           winsound.SND_ASYNC | winsound.SND_NODEFAULT)
+    def _publish(self, event: threading.Event, result: str, error: str = '', used: str | None = None) -> None:
+        with self._lock:
+            if self._stop_event is event and not event.is_set():
+                self.last_result, self.last_error = result, error
+                if used:
+                    self.last_used_backend = used
 
-    def _play_windows_worker(self, wav: bytes, stop_event: threading.Event) -> None:
+    def _play_windows(self, note: int, volume: float, buzzing: bool,
+                      event: threading.Event) -> None:
         try:
-            if stop_event.is_set():
+            if event.is_set():
                 return
-            if self._backend == "waveout":
-                try:
-                    _play_waveout(wav, stop_event)
-                    if not stop_event.is_set():
-                        self.last_result, self.last_error = "played", ""
-                    return
-                except (AudioPlaybackError, OSError, AttributeError, RuntimeError) as err:
-                    first_error = str(err)
-                    if stop_event.is_set():
-                        return
-                    try:
-                        self._winsound(wav)
-                        self.last_used_backend = "winsound-fallback"
-                        self.last_result = "started"
-                        self.last_error = f"Primary waveOut failed: {first_error}"
-                        return
-                    except (OSError, RuntimeError, ImportError) as secondary:
-                        raise AudioPlaybackError(f"waveOut: {first_error}; winsound: {secondary}")
-            else:
-                self._winsound(wav)
-                self.last_result, self.last_error = "started", ""
-        except (AudioPlaybackError, OSError, RuntimeError) as exc:
-            if not stop_event.is_set():
-                self.last_result, self.last_error = "error", str(exc)
+            assert self._sd is not None and self._device is not None
+            active_device = self._device
+            # Generate matching the actual WASAPI mix rate, not 22050 Hz.
+            wav = synthesize_string(note, volume=volume,
+                                    duration=0.55 if buzzing else 1.55, buzzing=buzzing,
+                                    sample_rate=active_device['samplerate'])
+            with wave.open(io.BytesIO(wav), 'rb') as source:
+                pcm = source.readframes(source.getnframes())
+            pcm = _stereo_pcm(pcm, active_device['channels'])
+            if event.is_set():
+                return
+            self._publish(event, 'playing')
+            play_portaudio_pcm(self._sd, pcm, active_device, event)
+            if not event.is_set():
+                self._publish(event, 'played', used=self._backend)
+        except Exception as exc:
+            self._publish(event, 'error', f'{type(exc).__name__}: {exc}', used=self._backend)
+
+    def _play_other(self, note: int, volume: float, buzzing: bool,
+                    event: threading.Event) -> None:
+        try:
+            wav = synthesize_string(note, volume=volume,
+                                    duration=0.55 if buzzing else 1.55, buzzing=buzzing)
+            if event.is_set():
+                return
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+                path = Path(tmp.name)
+                path.write_bytes(wav)
+            try:
+                cmd = {
+                    'afplay': ['afplay', str(path)],
+                    'ffplay': ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', str(path)],
+                    'paplay': ['paplay', str(path)],
+                    'aplay': ['aplay', '-q', str(path)],
+                }[self._backend]
+                process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                self._process = process
+                _stdout, stderr = process.communicate()
+                if process.returncode != 0:
+                    raise AudioPlaybackError(f'{self._backend} exited {process.returncode}: {stderr.decode(errors="replace")[:150]}')
+                self._publish(event, 'played')
+            finally:
+                path.unlink(missing_ok=True)
+        except Exception as exc:
+            self._publish(event, 'error', str(exc))
 
     def play(self, midi_note: int, buzzing: bool = False) -> bool:
         if self.volume == 0:
-            self.last_result, self.last_error = "muted", "Volume is 0%"
+            self.last_result, self.last_error = 'muted', 'Volume is 0%'
             return False
         if not self.available:
-            self.last_result, self.last_error = "unavailable", "No audio output backend"
+            self.last_result, self.last_error = 'unavailable', self.last_error or 'No audio device'
+            return False
+        if not isinstance(midi_note, int) or not 0 <= midi_note <= 127:
+            self.last_result, self.last_error = 'error', f'Invalid MIDI note: {midi_note}'
             return False
         self.stop()
-        try:
-            wav = synthesize_string(midi_note, volume=self.volume / 100,
-                                    duration=0.55 if buzzing else 1.55, buzzing=buzzing)
-            self.last_result, self.last_error = "starting", ""
-            self.last_used_backend = self._backend
-            if self._backend in ("waveout", "winsound"):
-                event = threading.Event()
-                self._stop_event = event
-                self._worker = threading.Thread(target=self._play_windows_worker,
-                                                args=(wav, event), daemon=True)
-                self._worker.start()
-            else:
-                self._file.write_bytes(wav)
-                command = {
-                    "afplay": ["afplay", str(self._file)],
-                    "ffplay": ["ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", str(self._file)],
-                    "paplay": ["paplay", str(self._file)],
-                    "aplay": ["aplay", "-q", str(self._file)],
-                }[self._backend]
-                self._process = subprocess.Popen(command, stdout=subprocess.DEVNULL,
-                                                 stderr=subprocess.DEVNULL)
-                self.last_result = "started"
-            return True
-        except (OSError, ValueError, RuntimeError) as exc:
-            self.last_result, self.last_error = "error", str(exc)
-            return False
+        event = threading.Event()
+        with self._lock:
+            self._stop_event = event
+            self.last_result, self.last_error = 'starting', ''
+            self.last_used_backend = self._backend or 'none'
+        target = self._play_windows if sys.platform == 'win32' else self._play_other
+        worker = threading.Thread(target=target, args=(midi_note, self.volume / 100.0, buzzing, event), daemon=True)
+        self._worker = worker
+        worker.start()
+        return True
 
     def stop(self) -> None:
-        if self._stop_event is not None:
-            self._stop_event.set()
+        with self._lock:
+            previous = self._stop_event
             self._stop_event = None
-        if self._process is not None:
-            if self._process.poll() is None:
-                self._process.terminate()
-                try:
-                    self._process.wait(timeout=0.3)
-                except subprocess.TimeoutExpired:
-                    self._process.kill()
-                    self._process.wait(timeout=0.3)
-            self._process = None
-        if self._backend in ("waveout", "winsound") and sys.platform == "win32":
-            try:
-                import winsound
-                winsound.PlaySound(None, 0)
-            except (ImportError, OSError, RuntimeError):
-                pass
+        if previous is not None:
+            previous.set()
+        proc = self._process
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+        self._process = None
 
     def close(self) -> None:
         self.stop()
-        # Native waveOut workers need to finish releasing handles before temp cleanup.
         if self._worker is not None and self._worker.is_alive():
-            self._worker.join(timeout=2.5)
-        self._dir.cleanup()
+            self._worker.join(timeout=2.0)

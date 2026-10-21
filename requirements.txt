@@ -1,0 +1,2 @@
+# PortAudio WASAPI playback on Windows (same audio library as TittyTatter).
+sounddevice>=0.5,<1

@@ -758,6 +758,76 @@
       "path": "file_index.json",
       "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
       "detail": "Updated canonical machine index in place, 7 files; retained index Drive ID and all older artifacts; not mirrored in GitHub"
+    },
+    {
+      "id": "VG-20261021-0092",
+      "date": "2026-10-21",
+      "action": "reference.review",
+      "status": "success",
+      "detail": "Inspected TittyTatter audio_engine.py: sounddevice PortAudio, Windows WASAPI default output endpoint preference, OutputStream"
+    },
+    {
+      "id": "VG-20261021-0093",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "v0.4.3 WASAPI implementation: 48 unittest passed, GUI smoke passed, 6-window-layout smoke passed, py_compile passed; Windows actual endpoint playback pending manual user acceptance"
+    },
+    {
+      "id": "VG-20261021-0094",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_audio.py",
+      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+    },
+    {
+      "id": "VG-20261021-0095",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+    },
+    {
+      "id": "VG-20261021-0096",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/test_audio_backend.py",
+      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+    },
+    {
+      "id": "VG-20261021-0097",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "RUN.bat",
+      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+    },
+    {
+      "id": "VG-20261021-0098",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "requirements.txt",
+      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+    },
+    {
+      "id": "VG-20261021-0099",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+    },
+    {
+      "id": "VG-20261021-0100",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "Atomic WASAPI patch, tests, dependency setup and event ledger on main"
     }
   ]
 }

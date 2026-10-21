@@ -562,10 +562,10 @@ class NoteTrainer:
                  variable=volume, command=volume_changed,
                  bg=PANEL, fg=TEXT, troughcolor=CELL_ACTIVE, highlightthickness=0,
                  activebackground=ACCENT, length=430).pack(fill="x")
-        self._label(frame, "Звук синтезированный (щипок струны), не аудиосэмпл.",
-                    9, MUTED).pack(anchor="w")
+        self._label(frame, "Выход: " + self.audio.host_api_name + " · " + self.audio.device_name,
+                    9, MUTED, wraplength=485, justify="left").pack(anchor="w")
         if not self.audio.available:
-            self._label(frame, "Нет доступного системного аудиоплеера: звук может не работать.",
+            self._label(frame, "WASAPI недоступен: запусти RUN.bat для установки sounddevice.",
                         9, AMBER).pack(anchor="w")
 
         bottom = tk.Frame(frame, bg=PANEL)
@@ -594,7 +594,7 @@ class NoteTrainer:
         test_btn = self._button(bottom, "♫ Тест", lambda: self._preview_audio(
             note_choices.index(midi_values[5].get()) + 24, volume.get()), compact=True)
         test_btn.pack(side="left")
-        Tooltip(test_btn, "Сыграть шестую струну. Через 2 секунды появится диагностика.")
+        Tooltip(test_btn, "Сыграть шестую струну через WASAPI; затем показать состояние вывода.")
         log_btn = self._button(bottom, "Лог звука", self._copy_audio_diagnostic, compact=True)
         log_btn.pack(side="left", padx=(5, 0))
         Tooltip(log_btn, "Скопировать состояние аудиосистемы для разбора проблем.")
@@ -620,7 +620,7 @@ class NoteTrainer:
                     if self.audio.last_result == "error"
                     else "Если звук не слышен, проверь микшер Windows и устройство вывода, затем пришли «Лог звука».")
             messagebox.showinfo("Проверка звука", lead + "\n\n" + status, parent=window)
-        self.root.after(1850, report)
+        self.root.after(2500, report)
 
     def page_scroll(self, units: int) -> None:
         return  # The main window deliberately has no vertical scrolling.
@@ -850,7 +850,7 @@ class NoteTrainer:
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.4.0",
+            "app_version": "0.4.3",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
