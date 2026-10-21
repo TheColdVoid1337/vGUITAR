@@ -740,6 +740,24 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Atomically publish v0.4.2 WinMM fallback, sound diagnostic UI, test coverage, VERSION and dev journal; docs frozen; GitHub Actions not used"
+    },
+    {
+      "id": "VG-20261021-0090",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "success",
+      "path": "vGUITAR_NoteTrainer_v0.4.2.zip",
+      "drive_file_id": "1PwnIgmo4Z9x01XwMoLeL9r_KYyjtaavx",
+      "detail": "Release ZIP with Windows audio waveOut fix; source of truth remains GitHub; 23,768 bytes SHA256 2c78bf74226d1c2740215c6b5d7926ecb796ffa2b41a2e7728eee01bc400f368"
+    },
+    {
+      "id": "VG-20261021-0091",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
+      "detail": "Updated canonical machine index in place, 7 files; retained index Drive ID and all older artifacts; not mirrored in GitHub"
     }
   ]
 }
