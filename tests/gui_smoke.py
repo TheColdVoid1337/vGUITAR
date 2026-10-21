@@ -18,6 +18,10 @@ with tempfile.TemporaryDirectory() as config:
     assert app.phase == 'ready'
     assert app._pitch(5, 0) == 40
     assert app.study_value.cget('text') == '60'
+    app.change_answer_layout('circle')
+    root.update()
+    assert app.answer_layout == 'circle'
+    assert app._responsive_orientation in ('side','stack')
     app.start_study()
     root.update()
     assert app.phase == 'study' and app.study_deadline is not None
@@ -90,5 +94,7 @@ with tempfile.TemporaryDirectory() as config:
     assert app.phase=='ready'
     assert os.path.isdir(os.path.join(config,'settings'))
     assert os.path.isdir(os.path.join(config,'results'))
+    from vguitar_storage import read_preferences
+    assert read_preferences()['lesson']['answer_layout'] == 'circle'
     root.destroy()
 print('GUI smoke PASS (timed study, response clock, history, clipboard, settings, audio triggers)')

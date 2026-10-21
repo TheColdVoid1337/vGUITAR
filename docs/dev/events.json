@@ -492,6 +492,102 @@
       "status": "success",
       "path": "VERSION.json",
       "detail": "v0.3.0 complete; user preferences and quiz results remain local only, docs freeze unchanged"
+    },
+    {
+      "id": "VG-20261021-0059",
+      "date": "2026-10-21",
+      "action": "local.modify",
+      "status": "success",
+      "detail": "Redesign main GUI as compact, non-scrolling display with responsive side-by-side small-height layout; larger natural note answers, small accidentals and radial circle answers"
+    },
+    {
+      "id": "VG-20261021-0060",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "34 unittest cases passed; Python syntax verified"
+    },
+    {
+      "id": "VG-20261021-0061",
+      "date": "2026-10-21",
+      "action": "local.gui_verify",
+      "status": "success",
+      "detail": "Tkinter smoke and layout checks passed at 680x575, 780x650, 1024x768; circle and rows, clipboard, persistence, and note clicks verified"
+    },
+    {
+      "id": "VG-20261021-0062",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "success",
+      "detail": "Uploaded standalone application v0.4.0 ZIP without settings/results directories",
+      "path": "vGUITAR_NoteTrainer_v0.4.0.zip",
+      "drive_file_id": "1OFMWp7t7c658OePKQJFxxOs4uIKeSZ1j",
+      "sha256": "cd7a31e7076605d744968b7b9be3f38beef30e546be59173758ba9ede3221fdc"
+    },
+    {
+      "id": "VG-20261021-0063",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "success",
+      "detail": "Uploaded GUI circle-mode preview to asset store",
+      "path": "vGUITAR_v0.4.0_circle_preview.png",
+      "drive_file_id": "1l2_D2UcqIUnoS8shcwZLsLWbPvRv0Mo6"
+    },
+    {
+      "id": "VG-20261021-0064",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "detail": "Refreshed canonical file_index.json in place (6 assets, stable Drive ID)",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261021-0065",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Atomic v0.4.0 source/test/version revision",
+      "path": "vguitar_notes.py"
+    },
+    {
+      "id": "VG-20261021-0066",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Atomic v0.4.0 source/test/version revision",
+      "path": "VERSION.json"
+    },
+    {
+      "id": "VG-20261021-0067",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Atomic v0.4.0 source/test/version revision",
+      "path": "tests/test_answer_layout.py"
+    },
+    {
+      "id": "VG-20261021-0068",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Atomic v0.4.0 source/test/version revision",
+      "path": "tests/gui_smoke.py"
+    },
+    {
+      "id": "VG-20261021-0069",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Atomic v0.4.0 source/test/version revision",
+      "path": "tests/gui_layout_smoke.py"
+    },
+    {
+      "id": "VG-20261021-0070",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic v0.4.0 code, regression tests and machine-readable project event journal commit"
     }
   ]
 }

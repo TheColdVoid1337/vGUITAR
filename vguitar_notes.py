@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import random
+import math
 import time
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -125,10 +126,10 @@ GREEN = "#57d5a0"
 RED = "#fb8c87"
 AMBER = "#f5c178"
 
-CELL_W = 72
-TOP = 48
-ROW_H = 47
-BOARD_H = TOP + ROW_H * 6 + 13
+CELL_W = 66
+TOP = 24
+ROW_H = 31
+BOARD_H = TOP + ROW_H * 6 + 6
 FONT = "Segoe UI"
 
 
@@ -204,9 +205,9 @@ class NoteTrainer:
         self.root = root
         self.root.title("vGUITAR — Note Trainer")
         self.root.configure(bg=BG)
-        self.root.minsize(680, 500)
+        self.root.minsize(680, 575)
         screen_w, screen_h = root.winfo_screenwidth(), root.winfo_screenheight()
-        self.root.geometry(f"{max(680, min(1070, screen_w - 80))}x{max(500, min(760, screen_h - 95))}")
+        self.root.geometry(f"{max(680, min(1070, screen_w - 70))}x{max(575, min(790, screen_h - 75))}")
 
         self.storage_warning = ""
         try:
@@ -232,6 +233,7 @@ class NoteTrainer:
         self.question_count = self._bounded(lesson.get("question_count", 10), 5, 100, 10)
         self.study_seconds = self._bounded(lesson.get("study_seconds", 60), 10, 300, 60)
         self.mode = lesson.get("mode") if lesson.get("mode") in ("name", "find") else "name"
+        self.answer_layout = lesson.get("answer_layout") if lesson.get("answer_layout") in ("rows", "circle") else "rows"
         self.phase = "ready"              # ready / study / quiz / result
         self.study_deadline: Optional[float] = None
         self.study_after_id: Optional[str] = None
@@ -250,6 +252,8 @@ class NoteTrainer:
         self.feedback = ""
         self.feedback_is_correct = False
         self.study_message = "Выбери область и запусти повторение."
+        self._chosen_pc: Optional[int] = None
+        self.answer_wheel_regions: dict[int, tuple[float, float, float]] = {}
 
         self._create_layout()
         self._update_all()
@@ -280,6 +284,7 @@ class NoteTrainer:
                     "question_count": self.question_count,
                     "study_seconds": self.study_seconds,
                     "mode": self.mode,
+                    "answer_layout": self.answer_layout,
                 },
             })
         except OSError as exc:
@@ -312,29 +317,22 @@ class NoteTrainer:
                         font=(FONT, size, "bold" if bold else "normal"), **kwargs)
 
     def _button(self, parent: tk.Widget, text: str, command,
-                primary: bool = False, width: Optional[int] = None) -> tk.Button:
+                primary: bool = False, width: Optional[int] = None, compact: bool = False) -> tk.Button:
         opts = dict(bg=ACCENT if primary else BUTTON_BG,
                     fg="#072139" if primary else TEXT,
                     activebackground="#8cddff" if primary else BUTTON_HOVER,
                     activeforeground="#072139" if primary else TEXT,
-                    relief="flat", bd=0, padx=16, pady=10,
-                    cursor="hand2", font=(FONT, 10, "bold"))
+                    relief="flat", bd=0, padx=8 if compact else 16, pady=3 if compact else 10,
+                    cursor="hand2", font=(FONT, 9 if compact else 10, "bold"))
         if width is not None:
             opts["width"] = width
         return tk.Button(parent, text=text, command=command, **opts)
 
     def _create_layout(self) -> None:
-        # Vertical scrolling keeps the test usable on smaller laptop screens.
-        scroller = tk.Canvas(self.root, bg=BG, bd=0, highlightthickness=0)
-        scrollbar = tk.Scrollbar(self.root, orient="vertical", command=scroller.yview)
-        scroller.configure(yscrollcommand=scrollbar.set)
-        scroller.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        self.page = scroller
-        self.outer = tk.Frame(scroller, bg=BG)
-        window_id = scroller.create_window((0, 0), anchor="nw", window=self.outer)
-        self.outer.bind("<Configure>", lambda e: scroller.configure(scrollregion=scroller.bbox("all")))
-        scroller.bind("<Configure>", lambda e: scroller.itemconfigure(window_id, width=e.width))
+        # A single screen: board and answer area share the available height.
+        self.outer = tk.Frame(self.root, bg=BG)
+        self.outer.pack(fill="both", expand=True)
+        self.page = None  # Legacy vertical scrolling deliberately removed.
 
         menu = tk.Menu(self.root)
         settings_menu = tk.Menu(menu, tearoff=False)
@@ -345,43 +343,47 @@ class NoteTrainer:
         self.root.config(menu=menu)
 
         header = tk.Frame(self.outer, bg=BG)
-        header.pack(fill="x", padx=22, pady=(16, 12))
-        self._label(header, "vGUITAR", 13, ACCENT, True, bg=BG).pack(anchor="w")
-        self._label(header, "Тренажёр нот на грифе", 23, TEXT, True, bg=BG).pack(anchor="w")
-        self._label(header, "Учи ноты · Проверяй себя · Следи за прогрессом", 10, MUTED, bg=BG).pack(anchor="w", pady=(3, 0))
+        header.pack(fill="x", padx=12, pady=(5, 4))
+        self._label(header, "vGUITAR", 16, ACCENT, True, bg=BG).pack(side="left")
+        self._label(header, "  NOTE TRAINER", 10, MUTED, True, bg=BG).pack(side="left")
+        b = self._button(header, "История", self.open_history, compact=True)
+        b.pack(side="right")
+        Tooltip(b, "Результаты прошлых тестов и экспорт нескольких запусков.")
 
-        settings = tk.Frame(self.outer, bg=PANEL, padx=16, pady=12,
+        settings = tk.Frame(self.outer, bg=PANEL, padx=9, pady=5,
                             highlightbackground=BORDER, highlightthickness=1)
-        settings.pack(fill="x", padx=22, pady=(0, 12))
+        settings.pack(fill="x", padx=12, pady=(0, 5))
         line1 = tk.Frame(settings, bg=PANEL)
         line1.pack(fill="x")
-        self.strings_value = self._counter(line1, "Активных струн", "strings", 1, 6)
-        self.frets_value = self._counter(line1, "Активных ладов", "frets", 1, 24)
-        self.questions_value = self._counter(line1, "Вопросов", "questions", 5, 100, step=5)
+        self.strings_value = self._counter(line1, "Струны", "strings", 1, 6)
+        self.frets_value = self._counter(line1, "Лады", "frets", 1, 24)
+        self.questions_value = self._counter(line1, "Вопросы", "questions", 5, 100, step=5)
+        self.study_value = self._counter(line1, "Повтор, с", "study", 10, 300, step=10)
         line2 = tk.Frame(settings, bg=PANEL)
-        line2.pack(fill="x", pady=(9, 0))
-        self.study_value = self._counter(line2, "Повторение, сек", "study", 10, 300, step=10)
-        self._label(line2, "Режим", 10, MUTED).pack(side="left", padx=(0, 8), pady=(22,0))
+        line2.pack(fill="x", pady=(4, 0))
+        self._label(line2, "Тест:", 9, MUTED).pack(side="left", padx=(0, 8))
         self.mode_buttons: dict[str, tk.Button] = {}
-        for m, text in (("name", "Назови ноту"), ("find", "Найди ноту на струне")):
-            btn = self._button(line2, text, lambda mode=m: self.change_mode(mode))
-            btn.pack(side="left", padx=(0, 7))
-            self.mode_buttons[m] = btn
+        for mode, title in (("name", "Назвать ноту"), ("find", "Найти на грифе")):
+            btn = self._button(line2, title, lambda m=mode: self.change_mode(m), compact=True)
+            btn.pack(side="left", padx=(0, 4))
+            self.mode_buttons[mode] = btn
+        self._label(line2, "Активные: от 6-й к 1-й", 9, FAINT).pack(side="right")
 
-
-        board_card = tk.Frame(self.outer, bg=PANEL, padx=16, pady=12,
+        self.content_area = tk.Frame(self.outer, bg=BG)
+        self.content_area.pack(fill="both", expand=True, padx=12, pady=(0, 5))
+        self._responsive_orientation = None
+        board_card = tk.Frame(self.content_area, bg=PANEL, padx=9, pady=5,
                               highlightbackground=BORDER, highlightthickness=1)
-        board_card.pack(fill="x", padx=22, pady=(0, 12))
+        self.board_card = board_card
         header_row = tk.Frame(board_card, bg=PANEL)
         header_row.pack(fill="x")
-        self.board_heading = self._label(header_row, "КАРТА ДЛЯ ПОВТОРЕНИЯ", 11, TEXT, True)
+        self.board_heading = self._label(header_row, "ГРИФ", 10, TEXT, True)
         self.board_heading.pack(side="left")
-        self.board_hint = self._label(header_row, "Полупрозрачные струны выключены", 10, MUTED)
+        self.board_hint = self._label(header_row, "", 9, MUTED)
         self.board_hint.pack(side="right")
-
         chart_row = tk.Frame(board_card, bg=PANEL)
-        chart_row.pack(fill="x", pady=(10, 0))
-        self.string_labels = tk.Canvas(chart_row, width=82, height=BOARD_H,
+        chart_row.pack(fill="x", pady=(3, 0))
+        self.string_labels = tk.Canvas(chart_row, width=72, height=BOARD_H,
                                        bg=PANEL, highlightthickness=0)
         self.string_labels.pack(side="left")
         board_area = tk.Frame(chart_row, bg=PANEL)
@@ -389,30 +391,69 @@ class NoteTrainer:
         self.board = tk.Canvas(board_area, height=BOARD_H, bg=PANEL,
                                highlightthickness=0, cursor="arrow")
         self.board.pack(fill="x")
-        hbar = tk.Scrollbar(board_area, orient="horizontal", command=self.board.xview)
+        hbar = tk.Scrollbar(board_area, orient="horizontal", command=self.board.xview,
+                            width=12)
         hbar.pack(fill="x")
         self.board.configure(xscrollcommand=hbar.set)
         self.board.bind("<Button-1>", self._click_board)
-        self._label(board_card, "0 — открытая струна. Прокрути гриф вправо, чтобы увидеть дальние лады.",
-                    9, MUTED).pack(anchor="w", pady=(8, 0))
+        Tooltip(self.board, "0 — открытая струна. В повторении щёлкни по ноте, чтобы услышать её.")
 
-        quiz_card = tk.Frame(self.outer, bg=PANEL, padx=16, pady=12,
+        quiz_card = tk.Frame(self.content_area, bg=PANEL, padx=9, pady=5,
                              highlightbackground=BORDER, highlightthickness=1)
-        quiz_card.pack(fill="x", padx=22, pady=(0, 12))
-        self.quiz_heading = self._label(quiz_card, "Подготовка", 13, TEXT, True)
-        self.quiz_heading.pack(anchor="w")
+        self.quiz_card = quiz_card
+        quiz_header = tk.Frame(quiz_card, bg=PANEL)
+        quiz_header.pack(fill="x")
+        self.quiz_heading = self._label(quiz_header, "Подготовка", 11, TEXT, True)
+        self.quiz_heading.pack(side="left")
+        layout_box = tk.Frame(quiz_header, bg=PANEL)
+        layout_box.pack(side="right")
+        self.answer_mode_buttons: dict[str, tk.Button] = {}
+        for layout, title in (("rows", "Ряды"), ("circle", "Круг")):
+            btn = self._button(layout_box, title, lambda name=layout: self.change_answer_layout(name), compact=True)
+            btn.pack(side="left", padx=(4, 0))
+            self.answer_mode_buttons[layout] = btn
+            Tooltip(btn, "Расположение нот-ответов. Для режима «Назвать ноту».")
+        self.answer_layout_frame = layout_box
         self.quiz_body = tk.Frame(quiz_card, bg=PANEL)
-        self.quiz_body.pack(fill="x", pady=(8, 0))
+        self.quiz_body.pack(fill="both", expand=True, pady=(3, 0))
         self.action_row = tk.Frame(quiz_card, bg=PANEL)
-        self.action_row.pack(fill="x", pady=(10, 0))
+        self.action_row.pack(fill="x", pady=(4, 0))
 
         footer = tk.Frame(self.outer, bg=BG)
-        footer.pack(fill="x", padx=22, pady=(0, 15))
+        footer.pack(fill="x", padx=12, pady=(0, 3))
         self.footer_label = self._label(footer, "", 9, MUTED, bg=BG)
-        self.footer_label.pack(anchor="w")
+        self.footer_label.pack(side="left")
         self.status_label = self._label(footer, "", 9, ACCENT, bg=BG)
-        self.status_label.pack(anchor="w")
-        Tooltip(self.board, "Во время повторения нажми на ноту, чтобы услышать её. В режиме поиска выбери нужный лад.")
+        self.status_label.pack(side="right")
+        self._layout_content()
+        self.root.bind("<Configure>", self._resize_main, add="+")
+
+    def _resize_main(self, event) -> None:
+        if event.widget is self.root:
+            self._layout_content()
+
+    def _layout_content(self) -> None:
+        orientation = "side" if self.root.winfo_height() < 708 else "stack"
+        if orientation == self._responsive_orientation:
+            return
+        self._responsive_orientation = orientation
+        area = self.content_area
+        self.board_card.grid_forget()
+        self.quiz_card.grid_forget()
+        for index in (0, 1):
+            area.grid_rowconfigure(index, weight=0, minsize=0)
+            area.grid_columnconfigure(index, weight=0, minsize=0)
+        if orientation == "side":
+            area.grid_columnconfigure(0, weight=1, uniform="columns")
+            area.grid_columnconfigure(1, weight=1, uniform="columns")
+            area.grid_rowconfigure(0, weight=1)
+            self.board_card.grid(row=0,column=0,sticky="nsew",padx=(0,3))
+            self.quiz_card.grid(row=0,column=1,sticky="nsew",padx=(3,0))
+        else:
+            area.grid_columnconfigure(0, weight=1)
+            area.grid_rowconfigure(1, weight=1)
+            self.board_card.grid(row=0,column=0,sticky="ew",pady=(0,5))
+            self.quiz_card.grid(row=1,column=0,sticky="nsew")
 
     def _on_close(self) -> None:
         self._cancel_study_timer()
@@ -525,30 +566,41 @@ class NoteTrainer:
         self.audio.volume = previous
 
     def page_scroll(self, units: int) -> None:
-        self.page.yview_scroll(units, "units")
+        return  # The main window deliberately has no vertical scrolling.
 
     def _mousewheel(self, event: tk.Event) -> None:
-        # Windows uses multiples of 120; macOS often sends smaller values.
-        units = -1 if event.delta > 0 else 1
-        if event.delta and event.widget.winfo_toplevel() == self.root:
-            self.page_scroll(units)
+        return  # The board uses its own horizontal scrollbar.
 
     def _counter(self, parent: tk.Widget, label: str, kind: str,
                  minimum: int, maximum: int, step: int = 1) -> tk.Label:
         box = tk.Frame(parent, bg=PANEL)
-        box.pack(side="left", padx=(0, 15))
-        self._label(box, label, 10, MUTED).pack(anchor="w", pady=(0, 5))
+        box.pack(side="left", padx=(0, 14))
         row = tk.Frame(box, bg=PANEL)
         row.pack(anchor="w")
-        self._button(row, "−", lambda: self.change_setting(kind, -step)).pack(side="left")
-        value = self._label(row, "", 15, TEXT, True, width=4)
-        value.pack(side="left", padx=8)
-        self._button(row, "+", lambda: self.change_setting(kind, step)).pack(side="left")
-        Tooltip(box, {"strings": "Струны активируются от басовой шестой к тонкой первой.",
+        self._label(row, label, 9, MUTED).pack(side="left", padx=(0, 5))
+        self._button(row, "−", lambda: self.change_setting(kind, -step), compact=True).pack(side="left")
+        value = self._label(row, "", 10, TEXT, True, width=3)
+        value.pack(side="left", padx=2)
+        self._button(row, "+", lambda: self.change_setting(kind, step), compact=True).pack(side="left")
+        Tooltip(box, {"strings": "Струны активируются от толстой шестой к тонкой первой.",
                       "frets": "Диапазон 0–N, включая открытую струну.",
                       "questions": "Число заданий в одном тесте.",
-                      "study": "Время показа подписанных нот перед тестом. По окончании стартует тест."}[kind])
+                      "study": "Сколько секунд показывать ноты до теста."}[kind])
         return value
+
+    def change_answer_layout(self, layout: str) -> None:
+        if layout not in ("rows", "circle"):
+            raise ValueError("Unknown note answer layout")
+        self.answer_layout = layout
+        self._save_preferences()
+        self._update_answer_layout_buttons()
+        self._update_quiz_ui()
+
+    def _update_answer_layout_buttons(self) -> None:
+        for name, button in self.answer_mode_buttons.items():
+            active = name == self.answer_layout
+            button.config(bg=ACCENT if active else BUTTON_BG,
+                          fg="#072139" if active else TEXT)
 
     def _active(self, row: int) -> bool:
         return row >= 6 - self.active_strings
@@ -567,6 +619,7 @@ class NoteTrainer:
 
     def change_mode(self, mode: str) -> None:
         self.mode = mode
+        self.board.xview_moveto(0)
         self._save_preferences()
         self.show_map("Режим изменён")
 
@@ -740,7 +793,7 @@ class NoteTrainer:
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.3.0",
+            "app_version": "0.4.0",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -865,6 +918,10 @@ class NoteTrainer:
         self.frets_value.config(text=str(self.active_frets))
         self.questions_value.config(text=str(self.question_count))
         self.study_value.config(text=str(self.study_seconds))
+        self._update_answer_layout_buttons()
+        self.answer_layout_frame.pack_forget()
+        if self.mode == "name":
+            self.answer_layout_frame.pack(side="right")
         for mode, btn in self.mode_buttons.items():
             selected = (mode == self.mode)
             btn.config(bg=ACCENT if selected else BUTTON_BG,
@@ -877,12 +934,11 @@ class NoteTrainer:
         self.string_labels.delete("all")
         width = (self.active_frets + 1) * CELL_W
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
-        self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study"
-                                  else "ГРИФ БЕЗ ПОДСКАЗОК")
-        self.board_hint.config(text=f"{self.active_strings} из 6 струн · 0–{self.active_frets} лад")
+        self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ")
+        self.board_hint.config(text=f"{self.active_strings}/6 струн · 0–{self.active_frets}")
         for fret in range(self.active_frets + 1):
             x0 = fret * CELL_W
-            self.board.create_text(x0 + CELL_W / 2, 25, text=str(fret),
+            self.board.create_text(x0 + CELL_W / 2, 12, text=str(fret),
                                    fill=MUTED, font=(FONT, 10, "bold"))
         for row, (num, letter, ru, base_pc) in enumerate(STRINGS):
             pc_open = self._pitch_class(row, 0)
@@ -891,12 +947,12 @@ class NoteTrainer:
             y0 = TOP + row * ROW_H
             ymid = y0 + ROW_H / 2
             label_color = TEXT if active else FAINT
-            self.string_labels.create_text(4, ymid - 8, text=f"{num}-я  {letter}",
+            self.string_labels.create_text(4, ymid - 7, text=f"{num}-я {letter}",
                                            anchor="w", fill=label_color,
-                                           font=(FONT, 11, "bold"))
-            self.string_labels.create_text(4, ymid + 11, text=ru,
+                                           font=(FONT, 10, "bold"))
+            self.string_labels.create_text(4, ymid + 8, text=ru,
                                            anchor="w", fill=MUTED if active else FAINT,
-                                           font=(FONT, 9))
+                                           font=(FONT, 8))
             for fret in range(self.active_frets + 1):
                 x0 = fret * CELL_W
                 color = (CELL_ACTIVE if fret % 2 == 0 else CELL_ACTIVE_ALT) if active else (
@@ -923,18 +979,18 @@ class NoteTrainer:
                         show_note = True
                 if show_note:
                     highlight = self.phase == "quiz" and self.checked
-                    self.board.create_oval(x0 + 13, ymid - 19, x0 + CELL_W - 13, ymid + 19,
+                    self.board.create_oval(x0 + 13, ymid - 14, x0 + CELL_W - 13, ymid + 14,
                                            fill="#236e70" if highlight else "#2b607f",
                                            outline=GREEN if highlight else "#4b9abd", width=1)
-                    self.board.create_text(x0 + CELL_W / 2, ymid - 7, text=self._note_name(pc),
-                                           fill=TEXT, font=(FONT, 12, "bold"))
-                    self.board.create_text(x0 + CELL_W / 2, ymid + 10, text=self._note_ru(pc),
-                                           fill="#c8e3ef", font=(FONT, 8))
+                    self.board.create_text(x0 + CELL_W / 2, ymid - 5, text=self._note_name(pc),
+                                           fill=TEXT, font=(FONT, 10, "bold"))
+                    self.board.create_text(x0 + CELL_W / 2, ymid + 8, text=self._note_ru(pc),
+                                           fill="#c8e3ef", font=(FONT, 7))
                 elif is_target:
-                    self.board.create_oval(x0 + 14, ymid - 18, x0 + CELL_W - 14, ymid + 18,
+                    self.board.create_oval(x0 + 14, ymid - 14, x0 + CELL_W - 14, ymid + 14,
                                            fill="#245879", outline=ACCENT, width=2)
                     self.board.create_text(x0 + CELL_W / 2, ymid, text="?",
-                                           fill=TEXT, font=(FONT, 17, "bold"))
+                                           fill=TEXT, font=(FONT, 14, "bold"))
                 if active and self.phase == "quiz" and self.mode == "find":
                     q = self._current()
                     if row == q.row and not self.checked:
@@ -956,76 +1012,150 @@ class NoteTrainer:
         for child in parent.winfo_children():
             child.destroy()
 
+    def _render_row_answers(self, parent: tk.Widget, target_pc: int) -> None:
+        # Seven naturals are primary; five sharps form a smaller second row.
+        grid = tk.Frame(parent, bg=PANEL)
+        grid.pack(fill="x", pady=1)
+        for column, natural in enumerate((0, 2, 4, 5, 7, 9, 11)):
+            grid.grid_columnconfigure(column, weight=1, uniform="notes")
+            button = self._answer_button(grid, natural, target_pc, compact=False)
+            button.grid(row=0, column=column, sticky="nsew", padx=2, pady=(2, 4))
+            sharp = {0:1, 2:3, 5:6, 7:8, 9:10}.get(natural)
+            if sharp is not None:
+                button = self._answer_button(grid, sharp, target_pc, compact=True)
+                button.grid(row=1, column=column, sticky="nsew", padx=2, pady=(0, 1))
+
+    def _answer_button(self, parent: tk.Widget, pc: int, target_pc: int,
+                       compact: bool) -> tk.Button:
+        label = self._note_name(pc)
+        button = self._button(parent, label, lambda n=pc: self.answer_name(n), compact=True)
+        button.config(font=(FONT, 10 if compact else 15, "bold"), pady=2 if compact else 6,
+                      bg="#224055" if compact else BUTTON_BG)
+        Tooltip(button, self._readable_note(pc))
+        if self.checked:
+            chosen = self._chosen_pc
+            if pc == target_pc:
+                button.config(bg="#27765e", fg=TEXT, activebackground="#27765e")
+            elif pc == chosen:
+                button.config(bg="#813f43", fg=TEXT)
+            else:
+                button.config(state="disabled", disabledforeground=FAINT)
+        return button
+
+    @staticmethod
+    def _circle_points(width: int, height: int) -> dict[int, tuple[float,float,float]]:
+        """Natural pitches on an outer heptagon; accidentals in its gaps inside."""
+        cx, cy = width / 2, height / 2
+        outer_r = max(32, min(width / 2 - 24, height / 2 - 22, 87))
+        inner_r = outer_r * .56
+        natural = (0, 2, 4, 5, 7, 9, 11)
+        positions = {}
+        for i, pitch in enumerate(natural):
+            angle = -math.pi / 2 + 2 * math.pi * i / 7
+            positions[pitch] = (cx + outer_r * math.cos(angle),
+                                cy + outer_r * math.sin(angle), min(17,outer_r*.23))
+        accidentals = {0:1, 1:3, 3:6, 4:8, 5:10}
+        for pos, pitch in accidentals.items():
+            angle = -math.pi / 2 + 2 * math.pi * (pos + .5) / 7
+            positions[pitch] = (cx + inner_r * math.cos(angle),
+                                cy + inner_r * math.sin(angle), min(15,outer_r*.18))
+        return positions
+
+    def _render_circle_answers(self, parent: tk.Widget, target_pc: int) -> None:
+        canvas = tk.Canvas(parent, height=190, bg=PANEL, highlightthickness=0,
+                           cursor="hand2")
+        canvas.pack(fill="both", expand=True)
+        self._answer_wheel = canvas
+        def draw(event=None):
+            width = max(canvas.winfo_width(), 190)
+            height = max(canvas.winfo_height(), 125)
+            canvas.delete("all")
+            self.answer_wheel_regions = self._circle_points(width, height)
+            cx, cy = width / 2, height / 2
+            outer = max(32, min(width/2-24, height/2-22, 87))
+            for radius in (outer, outer*.56):
+                canvas.create_oval(cx-radius,cy-radius,cx+radius,cy+radius,
+                                   outline=BORDER, width=1)
+            canvas.create_text(cx,cy,text="♮  /  ♯",fill=FAINT,font=(FONT,10))
+            for pc,(x,y,r) in self.answer_wheel_regions.items():
+                natural = pc in (0,2,4,5,7,9,11)
+                fill = BUTTON_BG if natural else "#224055"
+                outline = BORDER
+                if self.checked:
+                    if pc == target_pc:
+                        fill, outline = "#27765e",GREEN
+                    elif pc == self._chosen_pc:
+                        fill, outline = "#813f43", RED
+                    else:
+                        fill = CELL_INACTIVE
+                canvas.create_oval(x-r,y-r,x+r,y+r, fill=fill,
+                                   outline=outline,width=2 if pc==target_pc and self.checked else 1)
+                canvas.create_text(x,y,text=self._note_name(pc), fill=TEXT if not self.checked or pc in (target_pc,self._chosen_pc) else FAINT,
+                                   font=(FONT,11 if natural else 9,"bold"))
+        canvas.bind("<Configure>",draw)
+        def clicked(event):
+            if self.checked:
+                return
+            for pc, (x,y,r) in self.answer_wheel_regions.items():
+                if (event.x-x)**2 + (event.y-y)**2 <= (r+2)**2:
+                    self.answer_name(pc)
+                    return
+        canvas.bind("<Button-1>",clicked)
+        draw()
+
     def _update_quiz_ui(self) -> None:
         self._clear(self.quiz_body)
         self._clear(self.action_row)
         if self.phase in ("ready", "study"):
             self.quiz_heading.config(text="Подготовка" if self.phase == "ready" else f"Повторение · {self.study_left} с")
-            self._label(self.quiz_body,
-                        "Карта открывается на выбранное время." if self.phase == "ready" else "Нажимай на ноты — они звучат.",
-                        10, MUTED).pack(anchor="w")
             if self.phase == "ready":
-                b = self._button(self.action_row,"Повторение ▶",self.start_study,primary=True)
-                b.pack(side="left")
-                Tooltip(b,"Покажет подписанные ноты на выбранное время, затем автоматически начнёт тест.")
+                self._label(self.quiz_body,"Ноты появятся на выбранное время.",10,MUTED).pack(anchor="w")
+                button = self._button(self.action_row,"Повторение ▶",self.start_study,primary=True,compact=True)
+                button.pack(side="left")
+                Tooltip(button,"Показать ноты перед тестом, затем автоматически скрыть их.")
             else:
-                self._button(self.action_row,"Начать тест сейчас →",self.start_quiz,primary=True).pack(side="left")
+                self._label(self.quiz_body,"Нажимай ноты, чтобы услышать их.",10,MUTED).pack(anchor="w")
+                self._button(self.action_row,"Начать тест →",self.start_quiz,primary=True,compact=True).pack(side="left")
         elif self.phase == "quiz":
             q = self._current()
-            string_name = f"{STRINGS[q.row][0]}-я струна ({self._note_name(self._pitch_class(q.row, 0))})"
-            self.quiz_heading.config(text=f"Вопрос {self.index + 1} / {len(self.questions)}    ·    Правильно: {self.correct}")
+            target = self._pitch_class(q.row,q.fret)
+            string = f"{STRINGS[q.row][0]}-я ({self._note_name(self._pitch_class(q.row,0))})"
+            self.quiz_heading.config(text=f"Вопрос {self.index+1}/{len(self.questions)} · ✓ {self.correct}")
             if self.mode == "name":
-                question = f"Какая нота на {string_name}, {q.fret}-й лад?" if q.fret else (
-                    f"Какая нота на {string_name}, открытая струна?")
-                self._label(self.quiz_body, question, 13, TEXT, True).pack(anchor="w", pady=(0, 10))
-                answers = tk.Frame(self.quiz_body, bg=PANEL)
-                answers.pack(fill="x")
-                for pc in range(12):
-                    btn = self._button(answers, f"{self._note_name(pc)}  {self._note_ru(pc)}",
-                                       lambda n=pc: self.answer_name(n))
-                    btn.grid(row=pc // 6, column=pc % 6, sticky="ew", padx=3, pady=3)
-                    answers.columnconfigure(pc % 6, weight=1)
-                    if self.checked:
-                        if pc == self._pitch_class(q.row, q.fret):
-                            btn.configure(bg="#27765e", fg=TEXT, activebackground="#27765e")
-                        else:
-                            btn.configure(state="disabled", disabledforeground=FAINT)
+                where = f"лад {q.fret}" if q.fret else "открытая"
+                self._label(self.quiz_body,f"{string} · {where} — какая нота?",11,TEXT,True).pack(anchor="w")
+                if self.answer_layout == "circle":
+                    self._render_circle_answers(self.quiz_body,target)
+                else:
+                    self._render_row_answers(self.quiz_body,target)
             else:
-                self._label(self.quiz_body, f"Найди {self._readable_note(self._pitch_class(q.row, q.fret))} на {string_name}.",
-                            13, TEXT, True).pack(anchor="w")
-                self._label(self.quiz_body, "Щёлкни по нужному ладу этой струны на схеме выше. Можно выбрать открытую струну (0).",
-                            10, MUTED).pack(anchor="w", pady=(6, 0))
+                self._label(self.quiz_body,f"Найди {self._readable_note(target)} на {string}",11,TEXT,True).pack(anchor="w")
             if self.checked:
-                self._label(self.action_row, ("✓ " if self.feedback_is_correct else "✕ ") + self.feedback,
-                            10, GREEN if self.feedback_is_correct else AMBER,
-                            wraplength=820, justify="left").pack(side="left", fill="x", expand=True)
-                label = "Показать итог  →" if self.index + 1 == len(self.questions) else "Следующий вопрос  →"
-                self._button(self.action_row, label, self.next_question, primary=True).pack(side="right", padx=(12, 0))
+                prefix = "✓ " if self.feedback_is_correct else "✕ "
+                self._label(self.action_row,prefix+self.feedback,10,GREEN if self.feedback_is_correct else AMBER,
+                            wraplength=440,justify="left").pack(side="left",fill="x",expand=True)
+                caption = "Итог →" if self.index+1==len(self.questions) else "Дальше →"
+                self._button(self.action_row,caption,self.next_question,primary=True,compact=True).pack(side="right",padx=(6,0))
             else:
-                self._button(self.action_row, "Завершить без сохранения", self.abort_quiz).pack(side="left")
+                self._button(self.action_row,"Прервать",self.abort_quiz,compact=True).pack(side="left")
         else:
             total = len(self.questions)
-            self.quiz_heading.config(text=f"Тест завершён  ·  {self.correct} / {total}")
-            if self.mistakes:
-                self._label(self.quiz_body, "Стоит повторить:", 11, AMBER, True).pack(anchor="w")
-                for mistake in self.mistakes[:5]:
-                    self._label(self.quiz_body, "• " + mistake, 10, TEXT, wraplength=700, justify="left").pack(anchor="w", pady=2)
-                if len(self.mistakes) > 5:
-                    self._label(self.quiz_body, f"…и ещё {len(self.mistakes) - 5} ошибок.",
-                                10, MUTED).pack(anchor="w")
-            else:
-                self._label(self.quiz_body, "Все ответы правильные. Попробуй больше ладов или струн!",
-                            12, GREEN, True).pack(anchor="w")
+            self.quiz_heading.config(text=f"Результат · {self.correct}/{total}")
             if self.current_run:
-                stats = run_statistics(self.current_run)
+                stats=run_statistics(self.current_run)
                 self._label(self.quiz_body,
-                            f"Точность: {stats['accuracy_percent']}% · Среднее: {stats['mean_seconds']} с · Медиана: {stats['median_seconds']} с",
-                            11, ACCENT, True).pack(anchor="w", pady=(8,0))
-            exp = self._button(self.action_row, "Export Results", self.export_current, primary=True)
-            exp.pack(side="left",padx=(0,8))
-            Tooltip(exp,"Копирует JSON-отчёт этого теста в буфер обмена для Ctrl+V в ChatGPT.")
-            self._button(self.action_row, "История", self.open_history).pack(side="left",padx=(0,8))
-            self._button(self.action_row, "Повторить", self.show_map).pack(side="left",padx=(0,8))
+                            f"{stats['accuracy_percent']}% точно  ·  среднее {stats['mean_seconds']} с  ·  медиана {stats['median_seconds']} с",
+                            11,ACCENT,True).pack(anchor="w",pady=4)
+            if self.mistakes:
+                self._label(self.quiz_body,"Ошибки: " + "; ".join(self.mistakes[:2]) + ("…" if len(self.mistakes)>2 else ""),
+                            9,MUTED,wraplength=560,justify="left").pack(anchor="w")
+            else:
+                self._label(self.quiz_body,"Без ошибок!",11,GREEN,True).pack(anchor="w")
+            btn=self._button(self.action_row,"Export Results",self.export_current,primary=True,compact=True)
+            btn.pack(side="left",padx=(0,6))
+            Tooltip(btn,"Скопировать JSON-отчёт теста в буфер обмена.")
+            self._button(self.action_row,"История",self.open_history,compact=True).pack(side="left",padx=(0,6))
+            self._button(self.action_row,"Повторить",self.show_map,compact=True).pack(side="left")
 
 
 def main() -> None:
