@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "project": "vGUITAR",
+  "github": {
+    "repository": "TheColdVoid1337/vGUITAR",
+    "default_branch": "main",
+    "source_of_truth": true
+  },
+  "documentation": {
+    "sync_command": "#syncdocs",
+    "frozen_without_command": true,
+    "protected_paths": [
+      "README.md",
+      "CONTRIBUTING.md",
+      "CODE_OF_CONDUCT.md",
+      "SECURITY.md",
+      "docs/**"
+    ],
+    "exceptions": [
+      "docs/dev/events.json"
+    ]
+  },
+  "event_journal": {
+    "path": "docs/dev/events.json",
+    "record_every_action": true,
+    "format": "json-array"
+  },
+  "assets": {
+    "drive_folder_id": "1hQ2WZ39yWISqsk-qJLkn9HwEd0wbFcKZ",
+    "index_filename": "file_index.json",
+    "deduplicate_by": [
+      "logical_id",
+      "sha256"
+    ],
+    "update_index_in_place": true,
+    "store_release_bundles_in_drive": true,
+    "store_screenshots_in_drive": true
+  }
+}
