@@ -1143,6 +1143,24 @@
       "status": "success",
       "path": "docs/dev/events.json",
       "detail": "v0.4.7 atomic source/tests/journal commit to main; no GitHub Actions or frozen docs changed"
+    },
+    {
+      "id": "VG-20261022-0140",
+      "date": "2026-10-22",
+      "action": "drive.upload",
+      "status": "success",
+      "path": "vGUITAR_NoteTrainer_v0.4.7.zip",
+      "drive_file_id": "1sMcSy8YlN91UHH49FSILkVdMAmrqMimu",
+      "detail": "Packaged v0.4.7 release stored outside GitHub in designated Google Drive folder; verified Drive file id and URL"
+    },
+    {
+      "id": "VG-20261022-0141",
+      "date": "2026-10-22",
+      "action": "drive.update_file",
+      "status": "success",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
+      "detail": "Canonical machine index replaced in place with v0.4.7 release metadata, hash and Drive link; original index ID preserved"
     }
   ]
 }
