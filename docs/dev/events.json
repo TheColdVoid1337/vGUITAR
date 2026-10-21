@@ -587,7 +587,17 @@
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "detail": "Atomic v0.4.0 code, regression tests and machine-readable project event journal commit"
+      "detail": "Atomic v0.4.0 code, regression tests and machine-readable project event journal commit",
+      "commit": "5cfd920e5bfbd90804c325b9ed46c4d1790ccecd"
+    },
+    {
+      "id": "VG-20261021-0071",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "Record exact verified v0.4.0 source commit SHA in canonical event journal; docs freeze remains in effect",
+      "related_commit": "5cfd920e5bfbd90804c325b9ed46c4d1790ccecd"
     }
   ]
 }
