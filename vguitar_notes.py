@@ -132,6 +132,29 @@ ROW_H = 31
 BOARD_H = TOP + ROW_H * 6 + 6
 FONT = "Segoe UI"
 
+# Physical fretboard inlays (single and double dots), independent of tuning.
+INLAY_SINGLE = frozenset((3, 5, 7, 9, 15, 17, 19, 21))
+INLAY_DOUBLE = frozenset((12, 24))
+
+
+def fret_inlay_centers(fret: int, cell_width: float) -> list[tuple[float, float]]:
+    """Coordinates for realistic fretboard inlays within the 6-string grid.
+
+    Markers are kept between string rows, and never placed on open string 0.
+    """
+    x = (fret + 0.5) * cell_width
+    if fret in INLAY_DOUBLE:
+        return [(x, TOP + ROW_H * 2), (x, TOP + ROW_H * 4)]
+    if fret in INLAY_SINGLE:
+        return [(x, TOP + ROW_H * 3)]
+    return []
+
+
+def note_disc_bbox(x: float, y: float, cell_width: float) -> tuple[float, float, float, float]:
+    """Circular note badges stay circular when fret cells become wide."""
+    radius = min(13.4, ROW_H * .43, cell_width * .24)
+    return (x-radius, y-radius, x+radius, y+radius)
+
 
 @dataclass(frozen=True)
 class Question:
@@ -1008,6 +1031,9 @@ class NoteTrainer:
             x0 = fret * self.cell_width
             self.board.create_text(x0 + self.cell_width / 2, 12, text=str(fret),
                                    fill=MUTED, font=(FONT, 10, "bold"))
+
+        # Background grid FIRST: the fret inlays must sit on the fretboard,
+        # behind note labels and active answer highlights, not on top of text.
         for row, (num, letter, ru, base_pc) in enumerate(STRINGS):
             pc_open = self._pitch_class(row, 0)
             letter, ru = self._note_name(pc_open), self._note_ru(pc_open)
@@ -1035,6 +1061,27 @@ class NoteTrainer:
                 self.board.create_line(x0 + 7, ymid, x0 + self.cell_width - 7, ymid,
                                        fill=blend_hex("#b4d5e4", color, .45 if active else .13),
                                        width=max(1, 4 - row // 2))
+
+        # Standard guitar position markers: single 3/5/7/9 etc, double 12/24.
+        # White markers remain clearly visible even when those strings are grey.
+        dot_radius = min(4.7, ROW_H * .15)
+        for fret in range(1, self.active_frets + 1):
+            for cx, cy in fret_inlay_centers(fret, self.cell_width):
+                self.board.create_oval(cx - dot_radius, cy - dot_radius,
+                                       cx + dot_radius, cy + dot_radius,
+                                       fill="#f1f5fa", outline="#a8b8c9", width=1,
+                                       tags=("fret_inlay", f"fret_inlay_{fret}"))
+
+        # Foreground: notes and quiz target.  These are true circles, even when
+        # the window gets much wider than the nominal fret cells.
+        for row, (_num, _letter, _ru, _base_pc) in enumerate(STRINGS):
+            active = self._active(row)
+            y0 = TOP + row * ROW_H
+            ymid = y0 + ROW_H / 2
+            for fret in range(self.active_frets + 1):
+                x0 = fret * self.cell_width
+                center_x = x0 + self.cell_width / 2
+                disc = note_disc_bbox(center_x, ymid, self.cell_width)
                 pc = self._pitch_class(row, fret)
                 is_target = self.phase == "quiz" and self.mode == "name" and not self.checked and (
                     row == self._current().row and fret == self._current().fret)
@@ -1047,17 +1094,18 @@ class NoteTrainer:
                         show_note = True
                 if show_note:
                     highlight = self.phase == "quiz" and self.checked
-                    self.board.create_oval(x0 + 13, ymid - 14, x0 + self.cell_width - 13, ymid + 14,
+                    self.board.create_oval(*disc,
                                            fill="#236e70" if highlight else "#2b607f",
-                                           outline=GREEN if highlight else "#4b9abd", width=1)
-                    self.board.create_text(x0 + self.cell_width / 2, ymid - 5, text=self._note_name(pc),
+                                           outline=GREEN if highlight else "#4b9abd", width=1,
+                                           tags=("note_disc",))
+                    self.board.create_text(center_x, ymid - 5, text=self._note_name(pc),
                                            fill=TEXT, font=(FONT, 10, "bold"))
-                    self.board.create_text(x0 + self.cell_width / 2, ymid + 8, text=self._note_ru(pc),
+                    self.board.create_text(center_x, ymid + 7, text=self._note_ru(pc),
                                            fill="#c8e3ef", font=(FONT, 7))
                 elif is_target:
-                    self.board.create_oval(x0 + 14, ymid - 14, x0 + self.cell_width - 14, ymid + 14,
-                                           fill="#245879", outline=ACCENT, width=2)
-                    self.board.create_text(x0 + self.cell_width / 2, ymid, text="?",
+                    self.board.create_oval(*disc, fill="#245879", outline=ACCENT,
+                                           width=2, tags=("note_disc",))
+                    self.board.create_text(center_x, ymid, text="?",
                                            fill=TEXT, font=(FONT, 14, "bold"))
                 if active and self.phase == "quiz" and self.mode == "find":
                     q = self._current()

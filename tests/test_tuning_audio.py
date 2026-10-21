@@ -99,7 +99,8 @@ class Audio(unittest.TestCase):
         clean = synthesize_string(60, duration=0.55)
         buzz = synthesize_string(60, duration=0.55, buzzing=True)
         self.assertNotEqual(clean, buzz)
-        self.assertEqual(len(clean), len(buzz))
+        self.assertGreater(len(clean), len(buzz))
+        self.assertEqual(len(buzz), 44 + round(0.48 * SAMPLE_RATE) * 2)
 
     def test_zero_volume_silence(self):
         b = synthesize_string(60, volume=0, duration=0.1)

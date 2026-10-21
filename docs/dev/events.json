@@ -855,6 +855,69 @@
       "detail": "Replaced canonical file_index.json in place, preserving same Google Drive ID and adding release v0.4.3",
       "path": "file_index.json",
       "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261021-0104",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "v0.4.4: 54 unit tests pass; GUI smoke, fret-dot GUI smoke and 6-size layout smoke pass; Windows audio listening awaits user validation"
+    },
+    {
+      "id": "VG-20261021-0105",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_audio.py",
+      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+    },
+    {
+      "id": "VG-20261021-0106",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+    },
+    {
+      "id": "VG-20261021-0107",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+    },
+    {
+      "id": "VG-20261021-0108",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/test_tuning_audio.py",
+      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+    },
+    {
+      "id": "VG-20261021-0109",
+      "date": "2026-10-21",
+      "action": "github.create_file",
+      "status": "success",
+      "path": "tests/test_pluck_and_fret_markers.py",
+      "detail": "v0.4.4: added audio and fretboard geometry regressions"
+    },
+    {
+      "id": "VG-20261021-0110",
+      "date": "2026-10-21",
+      "action": "github.create_file",
+      "status": "success",
+      "path": "tests/gui_fret_marker_smoke.py",
+      "detail": "v0.4.4: added audio and fretboard geometry regressions"
+    },
+    {
+      "id": "VG-20261021-0111",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "Atomic v0.4.4 sound + fretboard correction on main; no GitHub Actions; docs frozen except this development journal"
     }
   ]
 }

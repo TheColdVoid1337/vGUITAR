@@ -29,45 +29,80 @@ def midi_frequency(midi_note: int) -> float:
 def synthesize_string(midi_note: int, volume: float = 0.65,
                       duration: float = 1.55, buzzing: bool = False,
                       sample_rate: int = SAMPLE_RATE) -> bytes:
-    """Render a deterministic guitar-like pluck / damped fret-buzz as PCM WAV."""
+    """Render a soft, pitched guitar pluck or a short dead-fret buzz.
+
+    Adapt TittyTatter's harmonic strengths (fundamental + 2nd..5th harmonics)
+    for a sustained NOTE instead of its very short rhythm-game hit.  A lightly
+    damped Karplus-Strong string adds organic motion; neither normal notes nor
+    the note-test button use a separate percussive noise burst.
+
+    This stays deterministic, standard-library-only, and pitch-aware for the
+    selected string, fret and tuning.  The audio backend is unchanged (WASAPI).
+    """
     if not 0 <= midi_note <= 127:
         raise ValueError("MIDI pitch must be 0..127")
     if not 0.0 <= volume <= 1.0:
         raise ValueError("Volume must be in 0..1")
     if not 0.1 <= duration <= 5.0:
         raise ValueError("Duration out of range")
-
     if not 8000 <= sample_rate <= 192000:
         raise ValueError("Unsupported sample rate")
+
     freq = midi_frequency(midi_note)
     if buzzing:
-        duration = min(duration, 0.60)
+        duration = min(duration, 0.48)
     count = round(sample_rate * duration)
-    rng = random.Random(midi_note * 37 + (3 if buzzing else 1))
+    rng = random.Random(73 * midi_note + (11 if buzzing else 5))
     nyquist = sample_rate / 2
-    partials = min(12, max(1, int(nyquist // freq) - 1))
-    harmonics = [(h, (1.0 / (h ** 1.27)) * (0.75 if h % 4 == 0 else 1.0))
-                 for h in range(1, partials + 1)]
+    strengths = ((1, 1.0), (2, .48), (3, .26), (4, .14), (5, .08))
+    harmonics = [(h, gain) for h, gain in strengths if h * freq < nyquist * .90]
+
+    # Low-pass the initial string displacement: a hard white-noise excitation
+    # sounds like percussion.  Subtract the DC offset before starting the loop.
+    delay_size = max(8, round(sample_rate / freq - .5))
+    displacement = []
+    previous = 0.0
+    for _ in range(delay_size):
+        previous = .81 * previous + .19 * rng.uniform(-1, 1)
+        displacement.append(previous)
+    avg = sum(displacement) / len(displacement)
+    displacement = [v - avg for v in displacement]
+    peak = max(1e-6, max(abs(v) for v in displacement))
+    displacement = [v / peak for v in displacement]
+    cursor = 0
+
     values = array.array('h')
     for i in range(count):
         t = i / sample_rate
-        attack = min(1.0, t / 0.004)
-        decay = math.exp(-t * (1.50 if freq < 180 else 2.15))
-        sample = 0.0
-        for h, strength in harmonics:
-            sample += strength * math.sin(2 * math.pi * freq * h * t) * math.exp(-t * h * 0.55)
-        sample *= 0.40 * attack * decay
-        sample += (rng.random() * 2 - 1) * 0.052 * math.exp(-t * 46)
         if buzzing:
-            sample *= math.exp(-t * 14.0)
-            buzz_gate = max(0.0, math.sin(2 * math.pi * 78.0 * t))
-            buzz_env = math.exp(-t * 7.0)
-            sample += (rng.random() * 2 - 1) * 0.20 * buzz_gate * buzz_env
-            sample += 0.12 * math.sin(2 * math.pi * min(freq * 1.018, nyquist - 100) * t) * buzz_env
-        sample = math.tanh(sample * 1.45)
-        fade = min(1.0, (duration - t) / 0.025)
-        values.append(int(max(-1.0, min(1.0, sample * volume * fade)) * 32767))
+            # A wrongly fretted string: recognisable pitch, fast mute, fine rattle.
+            body = sum(g * math.sin(2 * math.pi * freq * h * t)
+                       for h, g in harmonics)
+            # Subtle audible fret chatter instead of a loud percussion click.
+            rattle = .065 * (rng.random() * 2 - 1) * max(
+                0.0, math.sin(2 * math.pi * 66 * t))
+            attack = min(1.0, t / .006)
+            sound = (body * .46 + rattle) * math.exp(-t / .085) * attack
+        else:
+            # Natural short-lived pick followed by the longer ringing string.
+            # Smoothstep fades the first 12ms without a hard transient.
+            x = min(1.0, t / .012)
+            attack = x * x * (3 - 2 * x)
+            body = sum(g * math.sin(2 * math.pi * freq * h * t) *
+                       math.exp(-t * (.20 + .35 * h))
+                       for h, g in harmonics)
+            pluck = displacement[cursor]
+            after = displacement[(cursor + 1) % delay_size]
+            displacement[cursor] = .996 * .5 * (pluck + after)
+            cursor = (cursor + 1) % delay_size
+            string_decay = math.exp(-t / (2.2 if freq < 200 else 1.5))
+            sound = attack * (.52 * body + .21 * pluck * string_decay)
+        fade_out = min(1.0, max(0.0, (duration - t) / .040))
+        sample = math.tanh(sound * 1.20) * volume * fade_out
+        values.append(int(max(-1.0, min(1.0, sample)) * 32767))
 
+    if sys.byteorder != 'little':
+        values.byteswap()
     output = io.BytesIO()
     with wave.open(output, 'wb') as out:
         out.setnchannels(1)
