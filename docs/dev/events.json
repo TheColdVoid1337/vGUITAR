@@ -1161,6 +1161,77 @@
       "path": "file_index.json",
       "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
       "detail": "Canonical machine index replaced in place with v0.4.7 release metadata, hash and Drive link; original index ID preserved"
+    },
+    {
+      "id": "VG-20261022-0142",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+    },
+    {
+      "id": "VG-20261022-0143",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+    },
+    {
+      "id": "VG-20261022-0144",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_scale_mode.py",
+      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+    },
+    {
+      "id": "VG-20261022-0145",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_scale_smoke.py",
+      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+    },
+    {
+      "id": "VG-20261022-0146",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_ear_theme_smoke.py",
+      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+    },
+    {
+      "id": "VG-20261022-0147",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_fretboard_refactor_smoke.py",
+      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+    },
+    {
+      "id": "VG-20261022-0148",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_ear_layout_smoke.py",
+      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+    },
+    {
+      "id": "VG-20261022-0149",
+      "date": "2026-10-22",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "21 unit tests passed; GUI smoke, ear smoke, fretboard smoke, scale interaction and six-size layout smoke passed; WASAPI sound synthesis unchanged"
+    },
+    {
+      "id": "VG-20261022-0150",
+      "date": "2026-10-22",
+      "action": "github.commit",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "Atomic v0.4.8 changes on main; README/docs frozen except development JSON; GitHub Actions not used"
     }
   ]
 }

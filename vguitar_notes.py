@@ -127,7 +127,9 @@ RED = "#fb8c87"
 AMBER = "#f5c178"
 
 CELL_W = 66
-OPEN_WIDTH = 40  # open string is not a full fret
+OPEN_WIDTH = 52  # narrow open string area, but room for a note badge
+FRET_RATIO = 2 ** (-1 / 12)  # equal-tempered fret spacing toward the bridge
+FRET_MIN_WIDTH = 29  # enough click area at the highest fret
 FRETBOARD_THEMES = {
     "default": {"name": "Оригинальная", "neck": "#163349", "open": "#101c2a", "inactive": "#0b1929", "wire": "#8497a9", "string": "#b8d4df", "muted": "#506273", "dot": "#f1f5fa", "dot_outline": "#a8b8c9"},
     "ebony": {"name": "Ebony", "neck": "#1b1a1c", "open": "#101013", "inactive": "#101113", "wire": "#8d8d92", "string": "#c0c4c9", "muted": "#53555a", "dot": "#f6f4ee", "dot_outline": "#77787a"},
@@ -139,21 +141,33 @@ TOP = 24
 ROW_H = 31
 BOARD_H = TOP + ROW_H * 6 + 6
 FONT = "Segoe UI"
+SCALES = {
+    "Мажор": ((0,2,4,5,7,9,11,12), ("1","2","3","4","5","6","7","8")),
+    "Натуральный минор": ((0,2,3,5,7,8,10,12), ("1","2","♭3","4","5","♭6","♭7","8")),
+    "Минорная пентатоника": ((0,3,5,7,10,12), ("1","♭3","4","5","♭7","8")),
+    "Мажорная пентатоника": ((0,2,4,7,9,12), ("1","2","3","5","6","8")),
+    "Блюзовая": ((0,3,5,6,7,10,12), ("1","♭3","4","♭5","5","♭7","8")),
+    "Дорийский": ((0,2,3,5,7,9,10,12), ("1","2","♭3","4","5","6","♭7","8")),
+    "Фригийский": ((0,1,3,5,7,8,10,12), ("1","♭2","♭3","4","5","♭6","♭7","8")),
+}
+SCALE_POSITION_SPAN = 5
 
 # Physical fretboard inlays (single and double dots), independent of tuning.
 INLAY_SINGLE = frozenset((3, 5, 7, 9, 15, 17, 19, 21))
 INLAY_DOUBLE = frozenset((12, 24))
 
 
-def fret_start(fret: int, cell_width: float) -> float:
-    """X of the open cell or first/next fretted position."""
+def fret_width(fret: int, cell_width: float) -> float:
+    """Physical frets narrow by 2**(-1/12) per fret. Open area is separate."""
     if fret < 0:
         raise ValueError("Fret must be nonnegative")
-    return 0 if fret == 0 else OPEN_WIDTH + (fret - 1) * cell_width
+    return OPEN_WIDTH if fret == 0 else cell_width * FRET_RATIO ** (fret - 1)
 
 
-def fret_width(fret: int, cell_width: float) -> float:
-    return OPEN_WIDTH if fret == 0 else cell_width
+def fret_start(fret: int, cell_width: float) -> float:
+    if fret < 0:
+        raise ValueError("Fret must be nonnegative")
+    return 0.0 if fret == 0 else OPEN_WIDTH + cell_width * (1 - FRET_RATIO ** (fret-1)) / (1-FRET_RATIO)
 
 
 def fret_center(fret: int, cell_width: float) -> float:
@@ -161,7 +175,26 @@ def fret_center(fret: int, cell_width: float) -> float:
 
 
 def fret_from_x(x: float, cell_width: float) -> int:
-    return 0 if x < OPEN_WIDTH else 1 + int((x - OPEN_WIDTH) // cell_width)
+    if x < OPEN_WIDTH:
+        return 0
+    for fret in range(1, 25):
+        if x < fret_start(fret+1, cell_width):
+            return fret
+    return 25
+
+
+def board_width(n_frets: int, cell_width: float) -> float:
+    return fret_start(n_frets, cell_width) + fret_width(n_frets, cell_width)
+
+
+def board_base_width(available: float, n_frets: int) -> float:
+    """Fit short ranges; long necks scroll instead of making top frets unclickable."""
+    if n_frets < 1:
+        return CELL_W
+    ratio_sum = (1-FRET_RATIO**n_frets)/(1-FRET_RATIO)
+    by_available = (max(OPEN_WIDTH+1,available)-OPEN_WIDTH)/ratio_sum
+    by_click_target = FRET_MIN_WIDTH/(FRET_RATIO ** (n_frets-1))
+    return max(CELL_W, by_click_target, min(145.0,by_available))
 
 
 def fret_inlay_centers(fret: int, cell_width: float) -> list[tuple[float, float]]:
@@ -177,6 +210,44 @@ def note_disc_bbox(x: float, y: float, cell_width: float) -> tuple[float, float,
     """Circular note badges stay circular when fret cells become wide."""
     radius = min(13.4, ROW_H * .43, cell_width * .24)
     return (x-radius, y-radius, x+radius, y+radius)
+
+
+def scale_pattern(name: str, key: int) -> tuple[list[int], tuple[str, ...]]:
+    if name not in SCALES or not 0 <= key < 12:
+        raise ValueError("Unknown scale or key")
+    offsets, degrees = SCALES[name]
+    return [(key+n)%12 for n in offsets], degrees
+
+
+def scale_positions(tuning: tuple[int,...], name: str, key: int, start_fret: int,
+                    span: int = SCALE_POSITION_SPAN) -> list[tuple[int, int, int, str]]:
+    """Ascending tonic-to-octave phrase playable inside one 5-fret position.
+
+    Each step is (preferred row, fret, MIDI pitch, interval label). Other
+    positions with the same MIDI pitch are accepted at answer time.
+    """
+    if not 0 <= start_fret <= 24 or span < 1 or start_fret+span-1 > 24:
+        raise ValueError("Invalid position window")
+    offsets, labels = SCALES[name]
+    by_pitch: dict[int,list[tuple[int,int]]] = {}
+    for row in range(6):
+        for fret in range(start_fret,start_fret+span):
+            by_pitch.setdefault(pitch_at(tuning,row,fret),[]).append((row,fret))
+    candidates = [pitch for pitch in sorted(by_pitch) if pitch%12 == key and
+                  all(pitch+offset in by_pitch for offset in offsets)]
+    if not candidates:
+        raise ValueError("This position cannot contain a complete octave")
+    # Pick the lowest full octave for a natural ascending exercise.
+    root = candidates[0]
+    out = []
+    last_row = 5
+    for offset, degree in zip(offsets, labels):
+        midi = root + offset
+        # Prefer a nearby string; use a deterministic fingering only as a guide.
+        row,fret = min(by_pitch[midi],key=lambda rf:(abs(rf[0]-last_row),-rf[0],rf[1]))
+        out.append((row,fret,midi,degree))
+        last_row = row
+    return out
 
 
 @dataclass(frozen=True)
@@ -291,6 +362,10 @@ class NoteTrainer:
         if self.fretboard_theme not in FRETBOARD_THEMES:
             self.fretboard_theme = "default"
         self.answer_layout = lesson.get("answer_layout") if lesson.get("answer_layout") in ("rows", "circle") else "rows"
+        self.scale_name = lesson.get("scale_name") if lesson.get("scale_name") in SCALES else "Натуральный минор"
+        self.scale_key = self._bounded(lesson.get("scale_key",4),0,11,4)
+        self.scale_position = self._bounded(lesson.get("scale_position",0),0,20,0)
+        self.scale_steps: list[tuple[int,int,int,str]] = []
         self.phase = "ready"              # ready / study / quiz / result
         self.study_deadline: Optional[float] = None
         self.study_after_id: Optional[str] = None
@@ -354,6 +429,9 @@ class NoteTrainer:
                     "study_seconds": self.study_seconds,
                     "mode": self.mode,
                     "answer_layout": self.answer_layout,
+                    "scale_name": self.scale_name,
+                    "scale_key": self.scale_key,
+                    "scale_position": self.scale_position,
                 },
             })
         except OSError as exc:
@@ -425,13 +503,14 @@ class NoteTrainer:
         self.study_value = self._counter(self.counter_strip, "Повтор", "study", 10, 300, step=10)
         self.mode_strip = tk.Frame(toolbar, bg=PANEL)
         self.mode_buttons: dict[str, tk.Button] = {}
-        for mode, title in (("name", "Назвать"), ("find", "Найти"), ("ear", "На слух")):
+        for mode, title in (("name", "Назвать"), ("find", "Найти"), ("ear", "На слух"), ("scale", "Гаммы")):
             btn = self._button(self.mode_strip, title, lambda m=mode: self.change_mode(m), compact=True)
             btn.pack(side="left", padx=(0, 3))
             self.mode_buttons[mode] = btn
             Tooltip(btn, {"name": "Назвать ноту на указанном ладу.",
                           "find": "Найти названную ноту на указанной струне.",
-                          "ear": "На слух определить высоту и показать её на грифе; 3 повтора."}[mode])
+                          "ear": "На слух определить высоту и показать её на грифе; 3 повтора.",
+                          "scale": "По порядку сыграть ступени гаммы от тоники до октавы."}[mode])
         self.history_button = self._button(toolbar, "История", self.open_history, compact=True)
         Tooltip(self.history_button, "Результаты прошлых тестов и экспорт выбранных запусков.")
         self._toolbar_layout = None
@@ -451,7 +530,7 @@ class NoteTrainer:
         self.board_hint.pack(side="right")
         chart_row = tk.Frame(board_card, bg=PANEL)
         chart_row.pack(fill="x", pady=(3, 0))
-        self.string_labels = tk.Canvas(chart_row, width=72, height=BOARD_H,
+        self.string_labels = tk.Canvas(chart_row, width=94, height=BOARD_H,
                                        bg=PANEL, highlightthickness=0)
         self.string_labels.pack(side="left")
         board_area = tk.Frame(chart_row, bg=PANEL)
@@ -483,6 +562,23 @@ class NoteTrainer:
             self.answer_mode_buttons[layout] = btn
             Tooltip(btn, "Расположение нот-ответов. Для режима «Назвать ноту».")
         self.answer_layout_frame = layout_box
+        self.scale_options = tk.Frame(quiz_card, bg=PANEL)
+        self.scale_choice = tk.StringVar(value=self.scale_name)
+        self.scale_key_choice = tk.StringVar(value=NOTE_EN[self.scale_key])
+        self.scale_position_choice = tk.StringVar(value=str(self.scale_position))
+        self._scale_groups = []
+        for col, (heading,variable,choices,w) in enumerate((
+                ("Гамма",self.scale_choice,list(SCALES),19),
+                ("Key",self.scale_key_choice,list(NOTE_EN),5),
+                ("Лад от",self.scale_position_choice,[str(n) for n in range(21)],5))):
+            group = tk.Frame(self.scale_options,bg=PANEL)
+            group.grid(row=0,column=col,sticky="w",padx=(0,5))
+            self._scale_groups.append(group)
+            self._label(group,heading,9,MUTED).pack(anchor="w")
+            combo = ttk.Combobox(group,textvariable=variable,values=choices,
+                                 state="readonly",width=w)
+            combo.pack(anchor="w")
+            combo.bind("<<ComboboxSelected>>",self._scale_option_changed)
         self.quiz_body = tk.Frame(quiz_card, bg=PANEL)
         self.quiz_body.pack(fill="both", expand=True, pady=(3, 0))
         self.action_row = tk.Frame(quiz_card, bg=PANEL)
@@ -495,16 +591,30 @@ class NoteTrainer:
         self.status_label = self._label(footer, "", 9, ACCENT, bg=BG)
         self.status_label.pack(side="right")
         self._layout_content()
+        self._layout_scale_options(self.root.winfo_width())
         self.root.bind("<Configure>", self._resize_main, add="+")
 
     def _resize_main(self, event) -> None:
         if event.widget is self.root:
             self._layout_toolbar(event.width)
             self._layout_content()
+            self._layout_scale_options(event.width)
+
+    def _layout_scale_options(self, width: int) -> None:
+        compact = width < 900
+        if getattr(self, '_scale_options_compact', None) == compact:
+            return
+        self._scale_options_compact = compact
+        for group in self._scale_groups:
+            group.grid_forget()
+        self._scale_groups[0].grid(row=0,column=0,sticky='w',padx=(0,4))
+        self._scale_groups[1].grid(row=0,column=1,sticky='w',padx=(0,2))
+        self._scale_groups[2].grid(row=1 if compact else 0,column=0 if compact else 2,sticky='w',
+                                   padx=(0,2),pady=(3,0) if compact else (0,0))
 
     def _layout_toolbar(self, width: int) -> None:
         # Fully single-row on wide windows; compact 2-3 rows on narrow ones.
-        mode = "wide" if width >= 1200 else "medium" if width >= 790 else "small"
+        mode = "wide" if width >= 1430 else "medium" if width >= 790 else "small"
         if mode == self._toolbar_layout:
             return
         self._toolbar_layout = mode
@@ -537,6 +647,8 @@ class NoteTrainer:
         width, height = self.root.winfo_width(), self.root.winfo_height()
         orientation = "side" if height < 710 or width >= 1250 else "stack"
         if orientation == self._responsive_orientation:
+            if orientation == "side":
+                self.content_area.grid_columnconfigure(1, minsize=300 if width < 900 else 0)
             return
         self._responsive_orientation = orientation
         area = self.content_area
@@ -549,7 +661,8 @@ class NoteTrainer:
             area.grid_columnconfigure(index, weight=0, minsize=0, uniform="")
         if orientation == "side":
             area.grid_columnconfigure(0, weight=1)
-            area.grid_columnconfigure(1, weight=1)
+            area.grid_columnconfigure(1, weight=0 if width < 900 else 1,
+                                      minsize=300 if width < 900 else 0)
             area.grid_rowconfigure(0, weight=1)
             self.board_card.grid(row=0, column=0, sticky="nsew", padx=(0, 3))
             self.quiz_card.grid(row=0, column=1, sticky="nsew", padx=(3, 0))
@@ -780,6 +893,9 @@ class NoteTrainer:
     def _counter(self, parent: tk.Widget, label: str, kind: str,
                  minimum: int, maximum: int, step: int = 1) -> tk.Label:
         box = tk.Frame(parent, bg=PANEL)
+        if not hasattr(self, '_counter_boxes'):
+            self._counter_boxes = {}
+        self._counter_boxes[kind] = box
         box.pack(side="left", padx=(0, 7))
         row = tk.Frame(box, bg=PANEL)
         row.pack(anchor="w")
@@ -809,7 +925,11 @@ class NoteTrainer:
                           fg="#072139" if active else TEXT)
 
     def _active(self, row: int) -> bool:
-        return row >= 6 - self.active_strings
+        return self.mode == "scale" or row >= 6 - self.active_strings
+
+    def _scale_active_fret(self, fret: int) -> bool:
+        left,right = self._scale_area()
+        return left <= fret <= right
 
     def change_setting(self, kind: str, delta: int) -> None:
         if kind == "strings":
@@ -824,10 +944,25 @@ class NoteTrainer:
         self.show_map("Параметры изменены")
 
     def change_mode(self, mode: str) -> None:
+        if mode not in ("name","find","ear","scale"):
+            raise ValueError("Unknown mode")
         self.mode = mode
         self.board.xview_moveto(0)
         self._save_preferences()
         self.show_map("Режим изменён")
+
+    def _scale_option_changed(self, event=None) -> None:
+        self.scale_name = self.scale_choice.get()
+        self.scale_key = NOTE_EN.index(self.scale_key_choice.get())
+        self.scale_position = int(self.scale_position_choice.get())
+        self._save_preferences()
+        self.show_map("Гамма или позиция изменена")
+
+    def _scale_area(self) -> tuple[int,int]:
+        return self.scale_position, min(24,self.scale_position+SCALE_POSITION_SPAN-1)
+
+    def _board_frets(self) -> int:
+        return self._scale_area()[1] if self.mode == "scale" else self.active_frets
 
     def show_map(self, message: Optional[str] = None) -> None:
         """Preparation starts hidden; the full map is visible only for a timed window."""
@@ -840,13 +975,22 @@ class NoteTrainer:
         self._update_all()
 
     def start_study(self) -> None:
+        if self.mode == "scale":
+            try:
+                scale_positions(self.tuning,self.scale_name,self.scale_key,self.scale_position)
+            except ValueError:
+                messagebox.showwarning("Позиция недоступна",
+                    "Полная октава выбранной гаммы не помещается здесь. Измени позицию, гамму или строй.",
+                    parent=self.root)
+                return
         self._cancel_study_timer()
         self.phase = "study"
         # Start WASAPI early and pre-render the exact working-area pitches while
         # the student studies the fretboard. All computation stays off Tk's thread.
         self.audio.preload([self._pitch(row, fret)
-                            for row in range(6 - self.active_strings, 6)
-                            for fret in range(self.active_frets + 1)])
+                            for row in range(6) if self._active(row)
+                            for fret in range(self._board_frets() + 1)
+                            if self.mode != "scale" or self._scale_active_fret(fret)])
         self.study_deadline = time.monotonic() + self.study_seconds
         self.study_left = self.study_seconds
         self._update_all()
@@ -881,6 +1025,9 @@ class NoteTrainer:
         return self._pitch(row, fret) % 12
 
     def _make_questions(self) -> list[Question]:
+        if self.mode == "scale":
+            self.scale_steps = scale_positions(self.tuning,self.scale_name,self.scale_key,self.scale_position)
+            return [Question(row,fret) for row,fret,_,_ in self.scale_steps]
         pool = [Question(row, fret)
                 for row in range(6 - self.active_strings, 6)
                 for fret in range(self.active_frets + 1)]
@@ -942,7 +1089,13 @@ class NoteTrainer:
         self.run_id = uuid4().hex
         self.responses = []
         self.current_run = None
-        self.questions = self._make_questions()
+        try:
+            self.questions = self._make_questions()
+        except ValueError:
+            self.show_map("Гамма не помещается в эту позицию")
+            messagebox.showwarning("Позиция недоступна",
+                "Полная октава не помещается в пяти соседних ладах. Выбери другую позицию.",parent=self.root)
+            return
         self.audio.preload([self._pitch(q.row, q.fret) for q in self.questions])
         self.index = 0
         self.correct = 0
@@ -969,7 +1122,7 @@ class NoteTrainer:
         self.question_started = None
         self.checked = True
         self.feedback_is_correct = correct
-        answer_pc = actual_pc if self.mode in ("find", "ear") else getattr(self, "_chosen_pc", None)
+        answer_pc = actual_pc if self.mode in ("find", "ear", "scale") else getattr(self, "_chosen_pc", None)
         self.responses.append({
             "index": self.index + 1,
             "mode": self.mode,
@@ -978,7 +1131,9 @@ class NoteTrainer:
             "expected_note": self._note_name(target_pc),
             "expected_midi": self._pitch(q.row, q.fret),
             "answer_note": self._note_name(answer_pc) if answer_pc is not None else None,
-            "answer_fret": self.guess_fret if self.mode in ("find", "ear") else None,
+            "answer_fret": self.guess_fret if self.mode in ("find", "ear", "scale") else None,
+            "degree": self.scale_steps[self.index][3] if self.mode == "scale" else None,
+            "scale_step": self.index+1 if self.mode == "scale" else None,
             "answer_string_number": (int(STRINGS[self.guess_row][0]) if self.guess_row is not None else None),
             "answer_midi": (self._pitch(self.guess_row, self.guess_fret)
                             if self.guess_row is not None and self.guess_fret is not None else None),
@@ -997,6 +1152,14 @@ class NoteTrainer:
             if self.mode == "name":
                 self.feedback = f"{self._readable_note(target_pc)} · {duration:.2f} с"
                 self.mistakes.append(f"{n}-я струна, лад {q.fret}: {self._readable_note(target_pc)}")
+            elif self.mode == "scale":
+                correct_midi = self._pitch(q.row,q.fret)
+                positions = [(int(STRINGS[r][0]),f) for r in range(6)
+                             for f in range(self.scale_position,self.scale_position+SCALE_POSITION_SPAN)
+                             if self._pitch(r,f) == correct_midi]
+                detail = ", ".join(f"{row}/{f}" for row,f in positions)
+                self.feedback = f"Ступень {self.scale_steps[self.index][3]}: {midi_label(correct_midi)} · {detail} · {duration:.2f} с"
+                self.mistakes.append(f"{self.scale_name} · {NOTE_EN[self.scale_key]} · {self.feedback}")
             elif self.mode == "ear":
                 positions = [(int(STRINGS[r][0]), fret)
                              for r in range(6 - self.active_strings, 6)
@@ -1028,13 +1191,15 @@ class NoteTrainer:
         x = self.board.canvasx(event.x)
         fret = fret_from_x(x, self.cell_width)
         row = int((event.y - TOP) // ROW_H)
-        if not (0 <= fret <= self.active_frets and 0 <= row < 6 and self._active(row)):
+        if not (0 <= fret <= self._board_frets() and 0 <= row < 6 and self._active(row)):
+            return
+        if self.mode == "scale" and not self._scale_active_fret(fret):
             return
         if self.phase == "ready" or (self.phase == "study" and self.study_deadline is not None
                                       and time.monotonic() < self.study_deadline):
             self.audio.play(self._pitch(row, fret))
             return
-        if self.phase != "quiz" or self.checked or self.mode not in ("find", "ear"):
+        if self.phase != "quiz" or self.checked or self.mode not in ("find", "ear", "scale"):
             return
         q = self._current()
         if self.mode == "find" and row != q.row:
@@ -1042,7 +1207,7 @@ class NoteTrainer:
         self.guess_fret = fret
         self.guess_row = row
         pc = self._pitch_class(row, fret)
-        correct = (self._pitch(row, fret) == self._pitch(q.row, q.fret)) if self.mode == "ear" else (
+        correct = (self._pitch(row, fret) == self._pitch(q.row, q.fret)) if self.mode in ("ear","scale") else (
             pc == self._pitch_class(q.row, q.fret))
         self._feedback(correct, actual_pc=pc)
 
@@ -1071,7 +1236,7 @@ class NoteTrainer:
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.4.7",
+            "app_version": "0.4.8",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -1083,6 +1248,10 @@ class NoteTrainer:
                 "question_count": len(self.questions),
                 "study_seconds": self.study_seconds,
                 "mode": self.mode,
+                "scale": self.scale_name if self.mode == "scale" else None,
+                "key": NOTE_EN[self.scale_key] if self.mode == "scale" else None,
+                "position_start_fret": self.scale_position if self.mode == "scale" else None,
+                "position_width_frets": SCALE_POSITION_SPAN if self.mode == "scale" else None,
                 "fretboard_theme": self.fretboard_theme,
                 "ear_max_replays": EAR_REPLAYS if self.mode == "ear" else None,
             },
@@ -1149,7 +1318,7 @@ class NoteTrainer:
             indexed[item_id] = run
             tree.insert("", "end", iid=item_id, values=(
                 str(run.get("finished_at", ""))[:19].replace("T", " "),
-                {"name": "Нота", "find": "Найти", "ear": "На слух"}.get(cfg.get("mode"), "?"),
+                {"name": "Нота", "find": "Найти", "ear": "На слух", "scale":"Гаммы"}.get(cfg.get("mode"), "?"),
                 f"{cfg.get('active_strings','?')} стр. / {cfg.get('active_frets','?')} л.",
                 f"{stat['correct']}/{stat['total']} ({stat['accuracy_percent']}%)",
                 f"{stat['mean_seconds']:.2f} с" if stat['mean_seconds'] is not None else "—",
@@ -1204,23 +1373,32 @@ class NoteTrainer:
         self.frets_value.config(text=str(self.active_frets))
         self.questions_value.config(text=str(self.question_count))
         self.study_value.config(text=str(self.study_seconds))
+        for kind in ("strings","frets","questions"):
+            frame = self._counter_boxes[kind]
+            if self.mode == "scale":
+                frame.pack_forget()
+            elif not frame.winfo_manager():
+                frame.pack(side="left",before=self._counter_boxes["study"],padx=(0,7))
         self._update_answer_layout_buttons()
         self.answer_layout_frame.pack_forget()
+        self.scale_options.pack_forget()
         if self.mode == "name":
             self.answer_layout_frame.pack(side="right")
+        if self.mode == "scale":
+            self.scale_options.pack(fill="x",before=self.quiz_body,pady=(4,2))
         for mode, btn in self.mode_buttons.items():
             selected = (mode == self.mode)
             btn.config(bg=ACCENT if selected else BUTTON_BG,
                        fg="#072139" if selected else TEXT)
         if self.board.winfo_width() > 1:
-            self.cell_width = max(CELL_W, min(120, (self.board.winfo_width() - OPEN_WIDTH) // self.active_frets))
+            self.cell_width = board_base_width(self.board.winfo_width(),self._board_frets())
         self._draw_board()
         self._update_quiz_ui()
 
     def _board_resized(self, event) -> None:
         usable = max(1, int(event.width))
         # The open-string area stays narrow while fretted cells expand.
-        desired = max(CELL_W, min(120, (usable - OPEN_WIDTH) // self.active_frets))
+        desired = board_base_width(usable,self._board_frets())
         if desired != self.cell_width:
             self.cell_width = desired
             self._draw_board()
@@ -1228,13 +1406,15 @@ class NoteTrainer:
     def _draw_board(self) -> None:
         self.board.delete("all")
         self.string_labels.delete("all")
-        width = OPEN_WIDTH + self.active_frets * self.cell_width
+        limit = self._board_frets()
+        width = board_width(limit,self.cell_width)
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
         self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ")
-        self.board_hint.config(text=f"{self.active_strings}/6 струн · 0–{self.active_frets}")
-        for fret in range(self.active_frets + 1):
-            self.board.create_text(fret_center(fret, self.cell_width), 12, text=str(fret),
-                                   fill=MUTED, font=(FONT, 10, "bold"))
+        self.board_hint.config(text=(f"6/6 · позиция {self.scale_position}–{limit}" if self.mode == "scale"
+                                     else f"{self.active_strings}/6 струн · 0–{self.active_frets}"))
+        for fret in range(limit + 1):
+            self.board.create_text(fret_center(fret,self.cell_width),11,text=str(fret),
+                                   fill=TEXT,font=(FONT,13,"bold"),tags=("fret_number",))
 
         # Continuous fretboard surface.  Only real strings run horizontally:
         # there are no horizontal lane outlines between the strings.
@@ -1250,27 +1430,30 @@ class NoteTrainer:
             active = self._active(row)
             y0 = TOP + row * ROW_H
             ymid = y0 + ROW_H / 2
-            self.string_labels.create_text(4, ymid - 7, text=f'{num}-я {self._note_name(pc_open)}',
+            self.string_labels.create_text(4, ymid, text=f'{self._note_name(pc_open)}  {self._note_ru(pc_open)}  {num}',
                                            anchor='w', fill=TEXT if active else FAINT,
-                                           font=(FONT, 10, 'bold'))
-            self.string_labels.create_text(4, ymid + 8, text=self._note_ru(pc_open),
-                                           anchor='w', fill=MUTED if active else FAINT, font=(FONT, 8))
+                                           font=(FONT, 11, 'bold'),tags=('string_name',))
             if not active:
                 self.board.create_rectangle(0, y0, width, y0 + ROW_H,
                                             fill=blend_hex(wood["neck"], wood["inactive"], .40), outline='',
                                             tags=('inactive_overlay',))
+        if self.mode == "scale":
+            first = fret_start(self.scale_position,self.cell_width)
+            if first > 0:
+                self.board.create_rectangle(0,TOP,first,neck_bottom,
+                    fill=blend_hex(wood["neck"],BG,.25),outline='',tags=('outside_position',))
         # The nut separates fret 0 (open) from fret 1.  Each later fret wire
         # is thinner and does not quite reach the neck's upper/lower edge.
         self.board.create_rectangle(OPEN_WIDTH - 3, TOP + 2, OPEN_WIDTH + 2,
                                     neck_bottom - 2, fill='#d5dfe8', outline='', tags=('nut',))
-        for fret in range(2, self.active_frets + 1):
+        for fret in range(2, limit + 1):
             x = fret_start(fret, self.cell_width)
             self.board.create_line(x, TOP + 7, x, neck_bottom - 7,
-                                   fill=wood["wire"], width=1, tags=('fret_wire',))
+                                   fill=wood["wire"], width=3, tags=('fret_wire',))
         # Standard guitar position markers: single 3/5/7/9 etc, double 12/24.
         # White markers remain clearly visible even when those strings are grey.
         dot_radius = min(4.7, ROW_H * .15)
-        for fret in range(1, self.active_frets + 1):
+        for fret in range(1, limit + 1):
             for cx, cy in fret_inlay_centers(fret, self.cell_width):
                 self.board.create_oval(cx - dot_radius, cy - dot_radius,
                                        cx + dot_radius, cy + dot_radius,
@@ -1291,7 +1474,7 @@ class NoteTrainer:
             active = self._active(row)
             y0 = TOP + row * ROW_H
             ymid = y0 + ROW_H / 2
-            for fret in range(self.active_frets + 1):
+            for fret in range(limit + 1):
                 x0 = fret_start(fret, self.cell_width)
                 span = fret_width(fret, self.cell_width)
                 center_x = fret_center(fret, self.cell_width)
@@ -1299,15 +1482,19 @@ class NoteTrainer:
                 pc = self._pitch_class(row, fret)
                 is_target = self.phase == "quiz" and self.mode == "name" and not self.checked and (
                     row == self._current().row and fret == self._current().fret)
-                show_note = active and self.phase == "study"
+                show_note = (active and self.phase == "study" and
+                             (self.mode != "scale" or (self._scale_active_fret(fret) and
+                              self._pitch_class(row,fret) in scale_pattern(self.scale_name,self.scale_key)[0])))
                 if active and self.phase == "quiz" and self.checked:
                     q = self._current()
                     if self.mode == "name" and (row, fret) == (q.row, q.fret):
                         show_note = True
                     if self.mode == "find" and row == q.row and pc == self._pitch_class(q.row, q.fret):
                         show_note = True
-                    if self.mode == "ear" and self._pitch(row, fret) == self._pitch(q.row, q.fret):
+                    if self.mode in ("ear","scale") and self._pitch(row, fret) == self._pitch(q.row, q.fret):
                         show_note = True
+                if self.mode == "scale" and not self._scale_active_fret(fret):
+                    show_note = False
                 if show_note:
                     highlight = self.phase == "quiz" and self.checked
                     self.board.create_oval(*disc,
@@ -1323,7 +1510,7 @@ class NoteTrainer:
                                            width=2, tags=("note_disc",))
                     self.board.create_text(center_x, ymid, text="?",
                                            fill=TEXT, font=(FONT, 14, "bold"))
-                if active and self.phase == "quiz" and self.mode in ("find", "ear"):
+                if active and self.phase == "quiz" and self.mode in ("find", "ear", "scale"):
                     q = self._current()
                     if self.mode == "find" and row == q.row and not self.checked:
                         self.board.create_rectangle(x0 + 3, y0 + 3, x0 + span - 3,
@@ -1338,7 +1525,9 @@ class NoteTrainer:
             x0 = fret_start(q.fret, self.cell_width)
             if self.mode == "name":
                 self.board.xview_moveto(max(0, x0 - 2 * self.cell_width) / max(width, 1))
-            # In 'find' mode don't reveal the target fret by auto-scrolling.
+            # In find/ear don't reveal the target fret by auto-scrolling.
+        if self.mode == "scale":
+            self.board.xview_moveto(max(0,fret_start(self.scale_position,self.cell_width)-10)/max(width,1))
 
     def _clear(self, parent: tk.Widget) -> None:
         for child in parent.winfo_children():
@@ -1491,6 +1680,17 @@ class NoteTrainer:
                     self._render_row_answers(self.quiz_body,target)
             elif self.mode == "find":
                 self._render_find_target(target, string)
+            elif self.mode == "scale":
+                degree = self.scale_steps[self.index][3]
+                heading = f"{self.scale_name} · {NOTE_EN[self.scale_key]} · {self.index+1}/{len(self.scale_steps)}"
+                self._label(self.quiz_body,heading,11,MUTED,True).pack(anchor="w",pady=(2,7))
+                box = tk.Frame(self.quiz_body,bg="#19364d",padx=15,pady=12,highlightbackground=ACCENT,highlightthickness=1)
+                box.pack(anchor="w")
+                self._label(box,f"СТУПЕНЬ {degree}",21,ACCENT,True,bg="#19364d").pack(anchor="w")
+                self._label(box,f"Найди на грифе · лады {self.scale_position}–{self.scale_position+4}",
+                            10,TEXT,bg="#19364d").pack(anchor="w",pady=(5,0))
+                if self.checked:
+                    self._label(box,f"{midi_label(self._pitch(q.row,q.fret))}",12,GREEN,True,bg="#19364d").pack(anchor="w",pady=(5,0))
             else:
                 block = tk.Frame(self.quiz_body, bg="#172d43", padx=12, pady=10,
                                  highlightthickness=2, highlightbackground=ACCENT)

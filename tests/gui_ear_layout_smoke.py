@@ -8,7 +8,7 @@ with tempfile.TemporaryDirectory() as rootdir:
  errors=[]
  for w,h in ((680,575),(780,650),(1024,768),(1280,720),(1366,768),(1583,842)):
   root.geometry(f'{w}x{h}+0+0');root.update()
-  for mode in ('name','find','ear'):
+  for mode in ('name','find','ear','scale'):
    app.change_mode(mode);app.start_quiz();root.update()
    bottom=app.action_row.winfo_rooty()+app.action_row.winfo_height()-root.winfo_rooty()
    footer=app.status_label.winfo_rooty()+app.status_label.winfo_height()-root.winfo_rooty()

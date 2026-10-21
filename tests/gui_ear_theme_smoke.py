@@ -21,7 +21,7 @@ with tempfile.TemporaryDirectory() as folder:
     app.active_strings=2;app.active_frets=12
     app.change_mode('ear');root.update()
     assert app.mode=='ear'
-    assert len(app.mode_buttons)==3
+    assert len(app.mode_buttons)==4
     app.start_quiz();root.update()
     assert app.phase=='quiz'
     q=app._current()
