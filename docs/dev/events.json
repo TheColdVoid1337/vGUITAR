@@ -828,6 +828,33 @@
       "status": "success",
       "path": "docs/dev/events.json",
       "detail": "Atomic WASAPI patch, tests, dependency setup and event ledger on main"
+    },
+    {
+      "id": "VG-20261021-0101",
+      "date": "2026-10-21",
+      "action": "github.verify",
+      "status": "success",
+      "detail": "Read-back confirmed WASAPI patch, RUN.bat, requirements.txt, version and event ledger at 9fb667020321937629e71a1f8f6e71985d3a4784",
+      "commit": "9fb667020321937629e71a1f8f6e71985d3a4784"
+    },
+    {
+      "id": "VG-20261021-0102",
+      "date": "2026-10-21",
+      "action": "drive.upload",
+      "status": "success",
+      "detail": "Uploaded new v0.4.3 runnable ZIP; Windows WASAPI hardware acceptance remains pending",
+      "path": "vGUITAR_NoteTrainer_v0.4.3.zip",
+      "drive_file_id": "1gnx6bEw1eYmw_AHZDgIpi46NMBzntx8d",
+      "sha256": "a19bd8eaf8c4bd01eabc9a432d6fac2c0af51641a1f1a77ea895e72db030d139"
+    },
+    {
+      "id": "VG-20261021-0103",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "detail": "Replaced canonical file_index.json in place, preserving same Google Drive ID and adding release v0.4.3",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
     }
   ]
 }
