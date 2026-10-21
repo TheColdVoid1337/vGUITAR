@@ -171,6 +171,90 @@
       "status": "success",
       "path": "docs/dev/events.json",
       "detail": "Reconcile bootstrap journal with actual committed SHA; administrative ledger amendment"
+    },
+    {
+      "id": "VG-20261021-0020",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+    },
+    {
+      "id": "VG-20261021-0021",
+      "date": "2026-10-21",
+      "action": "github.create_file",
+      "status": "success",
+      "path": "vguitar_audio.py",
+      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+    },
+    {
+      "id": "VG-20261021-0022",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/test_notes.py",
+      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+    },
+    {
+      "id": "VG-20261021-0023",
+      "date": "2026-10-21",
+      "action": "github.create_file",
+      "status": "success",
+      "path": "tests/test_tuning_audio.py",
+      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+    },
+    {
+      "id": "VG-20261021-0024",
+      "date": "2026-10-21",
+      "action": "github.create_file",
+      "status": "success",
+      "path": "tests/gui_smoke.py",
+      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+    },
+    {
+      "id": "VG-20261021-0025",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+    },
+    {
+      "id": "VG-20261021-0026",
+      "date": "2026-10-21",
+      "action": "github.delete_file",
+      "status": "success",
+      "path": ".github/workflows/ci.yml",
+      "detail": "Remove GitHub Actions as explicitly requested; use local testing instead"
+    },
+    {
+      "id": "VG-20261021-0027",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "project_policy.json",
+      "detail": "Disable GitHub Actions and require locally executed verification"
+    },
+    {
+      "id": "VG-20261021-0028",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "25/25 Python unittest tests pass; Tkinter GUI xvfb smoke pass; py_compile pass",
+      "results": {
+        "unit_tests": "25/25 pass",
+        "gui_smoke": "passed with xvfb virtual display",
+        "compile": "passed",
+        "windows_audio": "requires user validation"
+      }
+    },
+    {
+      "id": "VG-20261021-0029",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "pending",
+      "detail": "Atomic vGUITAR Note Trainer v0.2 update on main; commit SHA readback later"
     }
   ]
 }

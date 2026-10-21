@@ -35,5 +35,11 @@
     "update_index_in_place": true,
     "store_release_bundles_in_drive": true,
     "store_screenshots_in_drive": true
+  },
+  "testing": {
+    "github_actions_enabled": false,
+    "verification": "local",
+    "run_github_actions": false,
+    "manual_validation_when_unavailable": true
   }
 }
