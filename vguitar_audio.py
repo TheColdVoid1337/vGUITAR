@@ -6,6 +6,7 @@ Other platforms retain available OS players. On Windows install sounddevice.
 from __future__ import annotations
 
 import array
+from collections import OrderedDict
 import io
 import math
 from pathlib import Path
@@ -15,6 +16,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import time
 import wave
 from typing import Any
 
@@ -201,16 +203,115 @@ def play_portaudio_pcm(sd: Any, pcm: bytes, device: dict[str, Any],
             stream.close()
 
 
+class PersistentCueStream:
+    """A single long-lived PortAudio/WASAPI stream; no device churn per note.
+
+    RawOutputStream's callback only copies already rendered PCM.  Rendering and
+    filesystem work always happen outside the realtime audio callback.
+    """
+
+    FADE_MS = 18
+
+    def __init__(self, sd: Any, device: dict[str, Any]) -> None:
+        self.device = device
+        self.channels = int(device['channels'])
+        self.rate = int(device['samplerate'])
+        self._lock = threading.Lock()
+        self._pcm: bytes | None = None
+        self._position = 0
+        self._tail: bytes | None = None
+        self._tail_pos = 0
+        self._tail_frame = 0
+        self._fade_frames = max(1, round(self.rate * self.FADE_MS / 1000))
+        self.callback_flags: list[str] = []
+        self.callback_count = 0
+        self.underflows = 0
+        self._stream = sd.RawOutputStream(
+            device=device['index'], samplerate=self.rate,
+            channels=self.channels, dtype='int16',
+            latency='high', blocksize=0, callback=self._callback,
+        )
+        try:
+            self._stream.start()
+        except Exception:
+            self._stream.close()
+            raise
+
+    def _callback(self, outdata: Any, frames: int, _time: Any, status: Any) -> None:
+        frame_bytes = self.channels * 2
+        needed = frames * frame_bytes
+        output = bytearray(needed)
+        with self._lock:
+            self.callback_count += 1
+            if status:
+                self.callback_flags.append(str(status))
+                self.callback_flags = self.callback_flags[-8:]
+                if getattr(status, 'output_underflow', False):
+                    self.underflows += 1
+            if self._pcm is not None:
+                segment = self._pcm[self._position:self._position + needed]
+                output[:len(segment)] = segment
+                self._position += len(segment)
+                if self._position >= len(self._pcm):
+                    self._pcm = None
+                    self._position = 0
+            if self._tail is not None:
+                fade_count = min(frames, self._fade_frames - self._tail_frame,
+                                 (len(self._tail) - self._tail_pos) // frame_bytes)
+                if fade_count > 0:
+                    # Only the very short crossfade needs sample-by-sample mixing.
+                    samples = array.array('h')
+                    samples.frombytes(output[:fade_count * frame_bytes])
+                    fading = array.array('h')
+                    fading.frombytes(self._tail[self._tail_pos:self._tail_pos + fade_count * frame_bytes])
+                    if sys.byteorder != 'little':
+                        samples.byteswap(); fading.byteswap()
+                    for j in range(fade_count):
+                        gain = max(0.0, 1.0 - (self._tail_frame + j) / self._fade_frames)
+                        for channel in range(self.channels):
+                            i = j * self.channels + channel
+                            samples[i] = max(-32768, min(32767, samples[i] + round(fading[i] * gain)))
+                    if sys.byteorder != 'little':
+                        samples.byteswap()
+                    output[:fade_count * frame_bytes] = samples.tobytes()
+                    self._tail_pos += fade_count * frame_bytes
+                    self._tail_frame += fade_count
+                if self._tail_frame >= self._fade_frames or self._tail_pos >= len(self._tail):
+                    self._tail = None
+        outdata[:] = output
+
+    def play(self, pcm: bytes) -> None:
+        with self._lock:
+            self._tail = self._pcm
+            self._tail_pos = self._position
+            self._tail_frame = 0
+            self._pcm = pcm
+            self._position = 0
+
+    def silence(self) -> None:
+        with self._lock:
+            self._tail = self._pcm
+            self._tail_pos = self._position
+            self._tail_frame = 0
+            self._pcm = None
+            self._position = 0
+
+    def close(self) -> None:
+        self._stream.stop()
+        self._stream.close()
+
+
 class AudioPlayer:
-    """Nonblocking audio with WASAPI device discovery and truthful diagnostics."""
+    """Cached guitar cues on a persistent WASAPI output, with device diagnostics.
+
+    A warmup/preload runs in background before testing; the first uncached cue
+    renders in its own worker so Tk never blocks.  PCM is kept in an LRU cache.
+    """
 
     def __init__(self, volume: int = 65) -> None:
         self.volume = max(0, min(100, int(volume)))
-        self._stop_event: threading.Event | None = None
-        self._worker: threading.Thread | None = None
-        self._process: subprocess.Popen | None = None
-        self._backend = None
-        self._sd = None
+        self._backend: str | None = None
+        self._sd: Any = None
         self._device: dict[str, Any] | None = None
         self.device_name = 'none'
         self.host_api_name = 'none'
@@ -218,7 +319,17 @@ class AudioPlayer:
         self.last_used_backend = 'none'
         self.last_result = 'idle'
         self.last_error = ''
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._cue_stream: PersistentCueStream | None = None
+        self._cache: OrderedDict[tuple[int, bool, int, int, int], bytes] = OrderedDict()
+        self._cache_limit = 96
+        self._ticket = 0
+        self._closing = False
+        self._preloader: threading.Thread | None = None
+        self._preload_generation = 0
+        self._process: subprocess.Popen | None = None
+        self._worker: threading.Thread | None = None
+        self._stop_event: threading.Event | None = None
         self._init_backend()
 
     def _init_backend(self) -> None:
@@ -255,75 +366,89 @@ class AudioPlayer:
     def available(self) -> bool:
         return self._backend is not None
 
-    def diagnostic(self) -> str:
-        selected = self._device
-        device_desc = ('n/a' if selected is None else
-                       f"{selected['index']}:{selected['name']} ({selected['hostapi']}, "
-                       f"{selected['samplerate']} Hz, {selected['channels']}ch)")
-        detected = ', '.join(f"{d['index']}:{d['name']} [{d['hostapi']}]"
-                             for d in self.available_devices)
-        return (f'platform={sys.platform}; backend={self._backend or "none"}; '
-                f'used={self.last_used_backend}; device={device_desc}; '
-                f'outputs={detected or "none"}; volume={self.volume}; '
-                f'result={self.last_result}; error={self.last_error or "none"}')
-
-    def _publish(self, event: threading.Event, result: str, error: str = '', used: str | None = None) -> None:
+    def _ensure_stream(self) -> bool:
+        if sys.platform != 'win32':
+            return True
         with self._lock:
-            if self._stop_event is event and not event.is_set():
-                self.last_result, self.last_error = result, error
-                if used:
-                    self.last_used_backend = used
-
-    def _play_windows(self, note: int, volume: float, buzzing: bool,
-                      event: threading.Event) -> None:
-        try:
-            if event.is_set():
-                return
-            assert self._sd is not None and self._device is not None
-            active_device = self._device
-            # Generate matching the actual WASAPI mix rate, not 22050 Hz.
-            wav = synthesize_string(note, volume=volume,
-                                    duration=0.55 if buzzing else 1.55, buzzing=buzzing,
-                                    sample_rate=active_device['samplerate'])
-            with wave.open(io.BytesIO(wav), 'rb') as source:
-                pcm = source.readframes(source.getnframes())
-            pcm = _stereo_pcm(pcm, active_device['channels'])
-            if event.is_set():
-                return
-            self._publish(event, 'playing')
-            play_portaudio_pcm(self._sd, pcm, active_device, event)
-            if not event.is_set():
-                self._publish(event, 'played', used=self._backend)
-        except Exception as exc:
-            self._publish(event, 'error', f'{type(exc).__name__}: {exc}', used=self._backend)
-
-    def _play_other(self, note: int, volume: float, buzzing: bool,
-                    event: threading.Event) -> None:
-        try:
-            wav = synthesize_string(note, volume=volume,
-                                    duration=0.55 if buzzing else 1.55, buzzing=buzzing)
-            if event.is_set():
-                return
-            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
-                path = Path(tmp.name)
-                path.write_bytes(wav)
+            if self._closing:
+                return False
+            if self._cue_stream is not None:
+                return True
             try:
-                cmd = {
-                    'afplay': ['afplay', str(path)],
-                    'ffplay': ['ffplay', '-nodisp', '-autoexit', '-loglevel', 'quiet', str(path)],
-                    'paplay': ['paplay', str(path)],
-                    'aplay': ['aplay', '-q', str(path)],
-                }[self._backend]
-                process = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-                self._process = process
-                _stdout, stderr = process.communicate()
-                if process.returncode != 0:
-                    raise AudioPlaybackError(f'{self._backend} exited {process.returncode}: {stderr.decode(errors="replace")[:150]}')
-                self._publish(event, 'played')
-            finally:
-                path.unlink(missing_ok=True)
-        except Exception as exc:
-            self._publish(event, 'error', str(exc))
+                if self._sd is None or self._device is None:
+                    raise AudioPlaybackError('WASAPI device not configured')
+                self._cue_stream = PersistentCueStream(self._sd, self._device)
+                self.last_error = ''
+                return True
+            except Exception as exc:
+                self.last_result = 'error'
+                self.last_error = f'{type(exc).__name__}: {exc}'
+                return False
+
+    def diagnostic(self) -> str:
+        dev = self._device
+        desc = ('n/a' if dev is None else
+                f"{dev['index']}:{dev['name']} ({dev['hostapi']}, {dev['samplerate']} Hz, {dev['channels']}ch)")
+        detected = ', '.join(f"{d['index']}:{d['name']} [{d['hostapi']}]" for d in self.available_devices)
+        stream = self._cue_stream
+        return (f'platform={sys.platform}; backend={self._backend or "none"}; used={self.last_used_backend}; '
+                f'device={desc}; outputs={detected or "none"}; volume={self.volume}; '
+                f'stream={"open" if stream else "closed"}; '
+                f'callback_count={stream.callback_count if stream else 0}; '
+                f'underruns={stream.underflows if stream else 0}; '
+                f'callback_status={",".join(stream.callback_flags) if stream else "none"}; '
+                f'cached={len(self._cache)}; result={self.last_result}; error={self.last_error or "none"}')
+
+    def _cache_key(self, note: int, buzzing: bool, volume: int) -> tuple[int, bool, int, int, int]:
+        device = self._device or {'samplerate': SAMPLE_RATE, 'channels': 1}
+        return (note, buzzing, volume, int(device['samplerate']), int(device['channels']))
+
+    def _prepare(self, note: int, buzzing: bool, volume: int) -> bytes:
+        key = self._cache_key(note, buzzing, volume)
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return self._cache[key]
+        wav = synthesize_string(note, volume=volume/100,
+                                duration=.48 if buzzing else 1.55,
+                                buzzing=buzzing, sample_rate=key[3])
+        with wave.open(io.BytesIO(wav), 'rb') as fd:
+            pcm = fd.readframes(fd.getnframes())
+        if sys.platform == 'win32':
+            pcm = _stereo_pcm(pcm, key[4])
+        with self._lock:
+            if not self._closing:
+                self._cache[key] = pcm
+                self._cache.move_to_end(key)
+                if len(self._cache) > self._cache_limit:
+                    self._cache.popitem(last=False)
+        return pcm
+
+    def preload(self, notes: list[int] | tuple[int, ...]) -> None:
+        """Warm playable notes in the background, without delaying the GUI."""
+        if not self.available or self.volume == 0 or self._closing or sys.platform != 'win32':
+            return
+        if not self._ensure_stream():
+            return
+        notes = list(dict.fromkeys(n for n in notes if isinstance(n, int) and 0 <= n <= 127))
+        if not notes:
+            return
+        volume = self.volume
+        with self._lock:
+            self._preload_generation += 1
+            generation = self._preload_generation
+        def warm() -> None:
+            for note in notes:
+                if self._closing or generation != self._preload_generation:
+                    break
+                try:
+                    self._prepare(note, False, volume)
+                except Exception as exc:
+                    self.last_error = str(exc)
+                # Yield CPU to WASAPI callback threads during cache warmup.
+                time.sleep(.005)
+        self._preloader = threading.Thread(target=warm, name='vGUITAR-audio-preload', daemon=True)
+        self._preloader.start()
 
     def play(self, midi_note: int, buzzing: bool = False) -> bool:
         if self.volume == 0:
@@ -335,30 +460,93 @@ class AudioPlayer:
         if not isinstance(midi_note, int) or not 0 <= midi_note <= 127:
             self.last_result, self.last_error = 'error', f'Invalid MIDI note: {midi_note}'
             return False
-        self.stop()
-        event = threading.Event()
+        if sys.platform == 'win32' and not self._ensure_stream():
+            return False
+        volume = self.volume
         with self._lock:
-            self._stop_event = event
+            self._ticket += 1
+            ticket = self._ticket
             self.last_result, self.last_error = 'starting', ''
             self.last_used_backend = self._backend or 'none'
-        target = self._play_windows if sys.platform == 'win32' else self._play_other
-        worker = threading.Thread(target=target, args=(midi_note, self.volume / 100.0, buzzing, event), daemon=True)
-        self._worker = worker
-        worker.start()
+        key = self._cache_key(midi_note, buzzing, volume)
+        with self._lock:
+            cached = self._cache.get(key)
+        if cached is not None:
+            self._emit(cached, ticket)
+        else:
+            worker = threading.Thread(target=self._render_play, args=(midi_note, buzzing, volume, ticket),
+                                      name='vGUITAR-audio-cue', daemon=True)
+            self._worker = worker
+            worker.start()
         return True
+
+    def _render_play(self, note: int, buzzing: bool, volume: int, ticket: int) -> None:
+        try:
+            pcm = self._prepare(note, buzzing, volume)
+            self._emit(pcm, ticket)
+        except Exception as exc:
+            with self._lock:
+                if self._ticket == ticket:
+                    self.last_result, self.last_error = 'error', f'{type(exc).__name__}: {exc}'
+
+    def _emit(self, pcm: bytes, ticket: int) -> None:
+        with self._lock:
+            if ticket != self._ticket or self._closing:
+                return
+            if sys.platform == 'win32':
+                if self._cue_stream is None:
+                    return
+                self._cue_stream.play(pcm)
+                self.last_result = 'playing'
+            else:
+                self._worker = threading.Thread(target=self._play_other_pcm, args=(pcm, ticket), daemon=True)
+                self._worker.start()
+
+    def _play_other_pcm(self, pcm: bytes, ticket: int) -> None:
+        try:
+            rate = self._cache_key(40, False, self.volume)[3]
+            with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
+                path = Path(tmp.name)
+                with wave.open(tmp, 'wb') as w:
+                    w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate)
+                    w.writeframes(pcm)
+            try:
+                cmd = {'afplay':['afplay',str(path)], 'ffplay':['ffplay','-nodisp','-autoexit','-loglevel','quiet',str(path)],
+                       'paplay':['paplay',str(path)], 'aplay':['aplay','-q',str(path)]}[self._backend]
+                proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+                self._process = proc
+                _, stderr = proc.communicate()
+                if proc.returncode:
+                    raise AudioPlaybackError(f'{self._backend}: {stderr.decode(errors="replace")[:150]}')
+            finally:
+                path.unlink(missing_ok=True)
+            with self._lock:
+                if ticket == self._ticket:
+                    self.last_result = 'played'
+        except Exception as exc:
+            with self._lock:
+                if ticket == self._ticket:
+                    self.last_result, self.last_error = 'error', str(exc)
 
     def stop(self) -> None:
         with self._lock:
-            previous = self._stop_event
-            self._stop_event = None
-        if previous is not None:
-            previous.set()
-        proc = self._process
+            self._ticket += 1
+            if self._cue_stream is not None:
+                self._cue_stream.silence()
+            proc = self._process
+            self._process = None
         if proc is not None and proc.poll() is None:
             proc.terminate()
-        self._process = None
 
     def close(self) -> None:
         self.stop()
-        if self._worker is not None and self._worker.is_alive():
-            self._worker.join(timeout=2.0)
+        with self._lock:
+            self._closing = True
+            self._preload_generation += 1
+            stream = self._cue_stream
+            self._cue_stream = None
+        if stream is not None:
+            stream.close()
+        for worker in (self._preloader, self._worker):
+            if worker is not None and worker.is_alive():
+                worker.join(timeout=.2)

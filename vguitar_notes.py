@@ -715,6 +715,11 @@ class NoteTrainer:
     def start_study(self) -> None:
         self._cancel_study_timer()
         self.phase = "study"
+        # Start WASAPI early and pre-render the exact working-area pitches while
+        # the student studies the fretboard. All computation stays off Tk's thread.
+        self.audio.preload([self._pitch(row, fret)
+                            for row in range(6 - self.active_strings, 6)
+                            for fret in range(self.active_frets + 1)])
         self.study_deadline = time.monotonic() + self.study_seconds
         self.study_left = self.study_seconds
         self._update_all()
@@ -773,6 +778,7 @@ class NoteTrainer:
         self.responses = []
         self.current_run = None
         self.questions = self._make_questions()
+        self.audio.preload([self._pitch(q.row, q.fret) for q in self.questions])
         self.index = 0
         self.correct = 0
         self.mistakes = []
@@ -1230,6 +1236,24 @@ class NoteTrainer:
         canvas.bind("<Button-1>", clicked)
         draw()
 
+    def _render_find_target(self, pitch_class: int, string: str) -> None:
+        """High-contrast answer target: identify the desired note at a glance."""
+        accidental = pitch_class in (1, 3, 6, 8, 10)
+        emphasis = AMBER if accidental else ACCENT
+        heading = "НАЙДИ НОТУ"
+        card = tk.Frame(self.quiz_body, bg="#172d43", padx=10, pady=7,
+                        highlightthickness=2, highlightbackground=emphasis)
+        card.pack(fill="x", pady=(2, 6))
+        text_row = tk.Frame(card, bg="#172d43")
+        text_row.pack(fill="x")
+        self._label(text_row, heading, 9, MUTED, True, bg="#172d43").pack(side="left")
+        self._label(text_row, string, 10, TEXT, True, bg="#172d43").pack(side="right")
+        note = self._label(card, self._note_name(pitch_class), 32, emphasis, True,
+                           bg="#172d43", anchor="center")
+        note.pack(fill="x", pady=(0, 0))
+        self._label(card, self._note_ru(pitch_class), 12, TEXT, True,
+                    bg="#172d43").pack(fill="x")
+
     def _update_quiz_ui(self) -> None:
         self._clear(self.quiz_body)
         self._clear(self.action_row)
@@ -1256,7 +1280,7 @@ class NoteTrainer:
                 else:
                     self._render_row_answers(self.quiz_body,target)
             else:
-                self._label(self.quiz_body,f"Найди {self._readable_note(target)} на {string}",11,TEXT,True).pack(anchor="w")
+                self._render_find_target(target, string)
             if self.checked:
                 prefix = "✓ " if self.feedback_is_correct else "✕ "
                 self._label(self.action_row,prefix+self.feedback,10,GREEN if self.feedback_is_correct else AMBER,

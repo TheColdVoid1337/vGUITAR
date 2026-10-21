@@ -918,6 +918,61 @@
       "status": "success",
       "path": "docs/dev/events.json",
       "detail": "Atomic v0.4.4 sound + fretboard correction on main; no GitHub Actions; docs frozen except this development journal"
+    },
+    {
+      "id": "VG-20261021-0112",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "v0.4.5: 55 unit tests, Tkinter smoke, 6-size layout checks, fretboard/inlay checks and find-target display check passed; physical Windows WASAPI listening pending"
+    },
+    {
+      "id": "VG-20261021-0113",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
+      "path": "vguitar_audio.py"
+    },
+    {
+      "id": "VG-20261021-0114",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
+      "path": "vguitar_notes.py"
+    },
+    {
+      "id": "VG-20261021-0115",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
+      "path": "VERSION.json"
+    },
+    {
+      "id": "VG-20261021-0116",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
+      "path": "tests/test_audio_backend.py"
+    },
+    {
+      "id": "VG-20261021-0117",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
+      "path": "tests/gui_find_target_smoke.py"
+    },
+    {
+      "id": "VG-20261021-0118",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic source/test/version and dev-event ledger update for v0.4.5 on main. No GitHub Actions or frozen documentation modified.",
+      "path": "docs/dev/events.json"
     }
   ]
 }

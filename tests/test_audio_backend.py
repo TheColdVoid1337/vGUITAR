@@ -8,7 +8,7 @@ import unittest
 import wave
 from unittest.mock import patch
 
-from vguitar_audio import (AudioPlayer, find_output_devices, play_portaudio_pcm,
+from vguitar_audio import (AudioPlayer, PersistentCueStream, find_output_devices, play_portaudio_pcm,
                            synthesize_string, _stereo_pcm)
 
 
@@ -114,9 +114,8 @@ class WindowsWasapiTests(unittest.TestCase):
             player._sd=fake
             _, player._device=find_output_devices(fake)
             player._backend='wasapi'
-            event=threading.Event()
-            player._stop_event=event
-            player._play_windows(40,.51,False,event)
+            with patch.object(sys, 'platform', 'win32'):
+                self.assertFalse(player._ensure_stream())
             self.assertEqual(player.last_result,'error')
             self.assertIn('WASAPI endpoint unavailable',player.diagnostic())
             self.assertNotIn('winsound-fallback',player.diagnostic())
@@ -145,34 +144,65 @@ class WindowsWasapiTests(unittest.TestCase):
             finally:
                 player.close()
 
-    def test_play_async_uses_wasapi_not_waveout(self):
+    def test_play_uses_one_persistent_wasapi_stream(self):
         fake=FakePortAudio()
         with patch.object(sys,'platform','win32'),patch.dict(sys.modules,{'sounddevice':fake}):
             player=AudioPlayer(50)
             try:
                 self.assertTrue(player.play(40))
-                player._worker.join(timeout=4)
+                player._worker.join(timeout=8)
                 self.assertFalse(player._worker.is_alive())
-                self.assertEqual(player.last_result,'played')
+                self.assertEqual(player.last_result,'playing')
                 self.assertEqual(player.last_used_backend,'wasapi')
-                self.assertTrue(fake.streams)
+                self.assertEqual(len(fake.streams),1)
                 self.assertEqual(fake.streams[0].kwargs['samplerate'],48000)
+                self.assertTrue(callable(fake.streams[0].kwargs['callback']))
+                self.assertTrue(player.play(40))
+                self.assertEqual(len(fake.streams),1)
+                output=bytearray(2*2*256)
+                fake.streams[0].kwargs['callback'](output,256,None,None)
+                self.assertNotEqual(output,bytearray(len(output)))
+                self.assertIn('stream=open',player.diagnostic())
             finally:
                 player.close()
+        self.assertEqual(fake.streams[0].state, ['start','stop','close'])
 
-    def test_stale_worker_cannot_clobber_current_status(self):
-        player=AudioPlayer(60)
+    def test_callback_silence_and_quick_cue_replacement(self):
+        fake=FakePortAudio()
+        _,device=find_output_devices(fake)
+        engine=PersistentCueStream(fake,device)
         try:
-            old=threading.Event()
-            new=threading.Event()
-            player._stop_event=new
-            player.last_result='starting'
-            player._publish(old, 'error', 'outdated failure')
-            self.assertEqual(player.last_result,'starting')
-            player._publish(new, 'played')
-            self.assertEqual(player.last_result,'played')
+            render=lambda value: (value.to_bytes(2,'little',signed=True)*2)*512
+            output=bytearray(2*2*128)
+            engine._callback(output,128,None,None)
+            self.assertEqual(output,bytearray(len(output)))
+            engine.play(render(700))
+            engine._callback(output,128,None,None)
+            self.assertNotEqual(output,bytearray(len(output)))
+            engine.play(render(-700))
+            engine._callback(output,128,None,None)
+            self.assertEqual(engine.callback_count,3)
+            self.assertEqual(engine.underflows,0)
+            engine.silence()
+            engine._callback(output,128,None,None)
+            self.assertEqual(engine.callback_count,4)
         finally:
-            player.close()
+            engine.close()
+
+    def test_stale_render_does_not_interrupt_new_note(self):
+        fake=FakePortAudio()
+        with patch.object(sys,'platform','win32'),patch.dict(sys.modules,{'sounddevice':fake}):
+            player=AudioPlayer(60)
+            try:
+                self.assertTrue(player._ensure_stream())
+                player._ticket=2
+                note=(1).to_bytes(2,'little')*2*128
+                player._emit(note,1)
+                self.assertIsNone(player._cue_stream._pcm)
+                player._emit(note,2)
+                self.assertEqual(player._cue_stream._pcm,note)
+            finally:
+                player.close()
 
     def test_zero_volume_is_not_reported_as_played(self):
         player=AudioPlayer(0)
