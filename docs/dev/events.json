@@ -34,113 +34,143 @@
       "id": "VG-20261021-0004",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "vguitar_notes.py",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0005",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "RUN.bat",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0006",
       "date": "2026-10-21",
       "action": "github.update_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": ".gitignore",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0007",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": ".editorconfig",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0008",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "VERSION.json",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0009",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "CONTRIBUTING.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0010",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "CODE_OF_CONDUCT.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0011",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "SECURITY.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0012",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": ".github/PULL_REQUEST_TEMPLATE.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0013",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": ".github/ISSUE_TEMPLATE/bug_report.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0014",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": ".github/ISSUE_TEMPLATE/feature_request.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0015",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": ".github/workflows/ci.yml",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0016",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "tests/test_notes.py",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0017",
       "date": "2026-10-21",
       "action": "github.create_file",
-      "status": "prepared_in_commit",
+      "status": "success",
       "path": "project_policy.json",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved"
+      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
+    },
+    {
+      "id": "VG-20261021-0018",
+      "date": "2026-10-21",
+      "action": "github.commit",
+      "status": "success",
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85",
+      "detail": "Atomic initialization of source, tests, templates, policy and event journal on main"
+    },
+    {
+      "id": "VG-20261021-0019",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "Reconcile bootstrap journal with actual committed SHA; administrative ledger amendment"
     }
   ]
 }
