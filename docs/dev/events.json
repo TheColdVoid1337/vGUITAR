@@ -1232,6 +1232,42 @@
       "status": "success",
       "path": "docs/dev/events.json",
       "detail": "Atomic v0.4.8 changes on main; README/docs frozen except development JSON; GitHub Actions not used"
+    },
+    {
+      "id": "VG-20261022-0151",
+      "date": "2026-10-22",
+      "action": "drive.upload",
+      "status": "success",
+      "detail": "Uploaded v0.4.8 runtime ZIP; SHA-256 0fbefed49e06281189705497c158e2ee9cd913f91108050b5a9350988bb497d3",
+      "path": "vGUITAR_NoteTrainer_v0.4.8.zip",
+      "drive_file_id": "1qBTEPvDHeqVXotCM1bb16zfHAjErcqzW"
+    },
+    {
+      "id": "VG-20261022-0152",
+      "date": "2026-10-22",
+      "action": "drive.update_file",
+      "status": "failed",
+      "detail": "First canonical file_index.json replacement produced zero bytes despite success response; detected by immediate metadata validation",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261022-0153",
+      "date": "2026-10-22",
+      "action": "drive.update_file",
+      "status": "success",
+      "detail": "Recovered the canonical file_index.json in place from verified backup and added v0.4.8; same Drive file ID preserved",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261022-0154",
+      "date": "2026-10-22",
+      "action": "drive.verify",
+      "status": "success",
+      "detail": "Drive metadata reports 6970 bytes; raw file read confirms 11 indexed assets and v0.4.8 entry",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
     }
   ]
 }
