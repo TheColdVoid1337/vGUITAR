@@ -308,6 +308,58 @@
       "status": "success",
       "detail": "Amended canonical JSON journal to record completed GitHub and Drive work",
       "path": "docs/dev/events.json"
+    },
+    {
+      "id": "VG-20261021-0036",
+      "date": "2026-10-21",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "Regression check after Windows winsound stop fix: 25 unittest passed, GUI xvfb smoke passed and py_compile passed"
+    },
+    {
+      "id": "VG-20261021-0037",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Use winsound.PlaySound(None,0) to stop previous audio reliably on Windows",
+      "path": "vguitar_audio.py",
+      "commit": "b6dc64b8af0ee3b39f30b60a29336407d7b097f4"
+    },
+    {
+      "id": "VG-20261021-0038",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "detail": "Replaced existing v0.2.0 ZIP in place; unchanged Drive ID; updated WAV playback stop code",
+      "path": "vGUITAR_NoteTrainer_v0.2.0.zip",
+      "drive_file_id": "1KazFqQ4BTOVw1E-fHoE1UlQOciWmmHwB",
+      "sha256": "7c4ba2ff82f550a3e6559a0fa20dfeadc3d7de9f115f6a3564252213f1bc968a",
+      "size_bytes": 13506
+    },
+    {
+      "id": "VG-20261021-0039",
+      "date": "2026-10-21",
+      "action": "drive.update_file",
+      "status": "success",
+      "detail": "Refreshed canonical Drive index in place with current release sha256 and 3 files; preserved original index Drive ID",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261021-0040",
+      "date": "2026-10-21",
+      "action": "drive.delete_file",
+      "status": "success",
+      "detail": "Deleted transient file used to update Drive canonical JSON index",
+      "path": "_TEMP_index_update_final.json"
+    },
+    {
+      "id": "VG-20261021-0041",
+      "date": "2026-10-21",
+      "action": "github.update_file",
+      "status": "success",
+      "detail": "Append Windows playback patch and Drive asset change events into canonical dev journal",
+      "path": "docs/dev/events.json"
     }
   ]
 }
