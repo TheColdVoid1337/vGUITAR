@@ -7,7 +7,7 @@ import wave
 from array import array
 
 from vguitar_audio import synthesize_string, midi_frequency
-from vguitar_notes import ROW_H, TOP, fret_inlay_centers, note_disc_bbox
+from vguitar_notes import ROW_H, TOP, fret_inlay_centers, note_disc_bbox, fret_center
 
 
 def wav_samples(note, **opts):
@@ -61,7 +61,7 @@ class FretMarkersTests(unittest.TestCase):
             dots = fret_inlay_centers(fret, 120)
             self.assertEqual(len(dots), 2 if fret in doubles else 1 if fret in singles else 0)
             for x, y in dots:
-                self.assertEqual(x, (fret + .5)*120)
+                self.assertEqual(x, fret_center(fret, 120))
                 self.assertGreater(y, TOP)
                 self.assertLess(y, TOP + 6*ROW_H)
 

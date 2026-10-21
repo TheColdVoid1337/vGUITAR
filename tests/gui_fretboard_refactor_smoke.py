@@ -2,7 +2,7 @@
 import os, tempfile, tkinter as tk
 from tkinter import ttk
 from unittest.mock import MagicMock
-from vguitar_notes import NoteTrainer, TOP, ROW_H
+from vguitar_notes import NoteTrainer, TOP, ROW_H, OPEN_WIDTH
 from vguitar_storage import read_preferences
 with tempfile.TemporaryDirectory() as d:
     os.environ['VGUITAR_DATA_DIR']=d
@@ -16,14 +16,14 @@ with tempfile.TemporaryDirectory() as d:
     for ix, line in enumerate(lines):
         coords=app.board.coords(line)
         assert len(coords)==4 and coords[1]==coords[3]
-        assert coords[0]<app.cell_width and coords[2]>app.cell_width*12
+        assert coords[0]<OPEN_WIDTH and coords[2]>OPEN_WIDTH+app.cell_width*11
         widths.append(float(app.board.itemcget(line,'width')))
     assert widths==sorted(widths) and widths[-1]>widths[0]*2, widths
     nuts=app.board.find_withtag('nut')
     frets=app.board.find_withtag('fret_wire')
     assert len(nuts)==1 and len(frets)==11
     x1,y1,x2,y2=app.board.coords(nuts[0])
-    assert abs((x1+x2)/2-app.cell_width)<1
+    assert abs((x1+x2)/2-OPEN_WIDTH)<1
     for fret in frets:
         x1,y1,x2,y2=app.board.coords(fret)
         assert y1>TOP and y2<TOP+ROW_H*6
@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory() as d:
         if isinstance(widget,ttk.Notebook):tabs.append(widget)
         for child in widget.winfo_children():walk(child)
     walk(win)
-    assert tabs and tabs[0].tabs() and len(tabs[0].tabs())==2
+    assert tabs and tabs[0].tabs() and len(tabs[0].tabs())==3
     tabs[0].select(1);root.update()
     assert win.winfo_height()<=768 and win.winfo_width()<=1024
     win.destroy();root.destroy()

@@ -127,6 +127,14 @@ RED = "#fb8c87"
 AMBER = "#f5c178"
 
 CELL_W = 66
+OPEN_WIDTH = 40  # open string is not a full fret
+FRETBOARD_THEMES = {
+    "default": {"name": "Оригинальная", "neck": "#163349", "open": "#101c2a", "inactive": "#0b1929", "wire": "#8497a9", "string": "#b8d4df", "muted": "#506273", "dot": "#f1f5fa", "dot_outline": "#a8b8c9"},
+    "ebony": {"name": "Ebony", "neck": "#1b1a1c", "open": "#101013", "inactive": "#101113", "wire": "#8d8d92", "string": "#c0c4c9", "muted": "#53555a", "dot": "#f6f4ee", "dot_outline": "#77787a"},
+    "ash": {"name": "Светлый ясень", "neck": "#cba876", "open": "#987b58", "inactive": "#766956", "wire": "#62584e", "string": "#413f3a", "muted": "#756d61", "dot": "#fffdf5", "dot_outline": "#584b3a"},
+    "mahogany": {"name": "Махагон", "neck": "#693a2d", "open": "#3d241f", "inactive": "#332520", "wire": "#ac9189", "string": "#f0d7c6", "muted": "#78655e", "dot": "#fff6e6", "dot_outline": "#9e7b6d"},
+}
+EAR_REPLAYS = 3
 TOP = 24
 ROW_H = 31
 BOARD_H = TOP + ROW_H * 6 + 6
@@ -137,18 +145,33 @@ INLAY_SINGLE = frozenset((3, 5, 7, 9, 15, 17, 19, 21))
 INLAY_DOUBLE = frozenset((12, 24))
 
 
-def fret_inlay_centers(fret: int, cell_width: float) -> list[tuple[float, float]]:
-    """Coordinates for realistic fretboard inlays within the 6-string grid.
+def fret_start(fret: int, cell_width: float) -> float:
+    """X of the open cell or first/next fretted position."""
+    if fret < 0:
+        raise ValueError("Fret must be nonnegative")
+    return 0 if fret == 0 else OPEN_WIDTH + (fret - 1) * cell_width
 
-    Markers are kept between string rows, and never placed on open string 0.
-    """
-    x = (fret + 0.5) * cell_width
+
+def fret_width(fret: int, cell_width: float) -> float:
+    return OPEN_WIDTH if fret == 0 else cell_width
+
+
+def fret_center(fret: int, cell_width: float) -> float:
+    return fret_start(fret, cell_width) + fret_width(fret, cell_width) / 2
+
+
+def fret_from_x(x: float, cell_width: float) -> int:
+    return 0 if x < OPEN_WIDTH else 1 + int((x - OPEN_WIDTH) // cell_width)
+
+
+def fret_inlay_centers(fret: int, cell_width: float) -> list[tuple[float, float]]:
+    """Inlays on the real fretted neck; none on the short open cell."""
+    x = fret_center(fret, cell_width)
     if fret in INLAY_DOUBLE:
         return [(x, TOP + ROW_H * 2), (x, TOP + ROW_H * 4)]
     if fret in INLAY_SINGLE:
         return [(x, TOP + ROW_H * 3)]
     return []
-
 
 def note_disc_bbox(x: float, y: float, cell_width: float) -> tuple[float, float, float, float]:
     """Circular note badges stay circular when fret cells become wide."""
@@ -263,7 +286,10 @@ class NoteTrainer:
         self.active_frets = self._bounded(lesson.get("active_frets", 7), 1, 24, 7)
         self.question_count = self._bounded(lesson.get("question_count", 10), 5, 100, 10)
         self.study_seconds = self._bounded(lesson.get("study_seconds", 60), 10, 300, 60)
-        self.mode = lesson.get("mode") if lesson.get("mode") in ("name", "find") else "name"
+        self.mode = lesson.get("mode") if lesson.get("mode") in ("name", "find", "ear") else "name"
+        self.fretboard_theme = preferences.get("fretboard_theme", "default")
+        if self.fretboard_theme not in FRETBOARD_THEMES:
+            self.fretboard_theme = "default"
         self.answer_layout = lesson.get("answer_layout") if lesson.get("answer_layout") in ("rows", "circle") else "rows"
         self.phase = "ready"              # ready / study / quiz / result
         self.study_deadline: Optional[float] = None
@@ -280,6 +306,9 @@ class NoteTrainer:
         self.mistakes: list[str] = []
         self.checked = False
         self.guess_fret: Optional[int] = None
+        self.guess_row: Optional[int] = None
+        self.ear_replays_used = 0
+        self._ear_sound_after_id: Optional[str] = None
         self.feedback = ""
         self.feedback_is_correct = False
         self.study_message = "Выбери область и запусти повторение."
@@ -311,6 +340,7 @@ class NoteTrainer:
                 "preset": self.preset_name,
                 "tuning_midi": list(self.tuning),
                 "volume": self.audio.volume,
+                "fretboard_theme": self.fretboard_theme,
                 "audio": {
                     "output_id": self.audio.output_id,
                     "latency": self.audio.latency,
@@ -395,12 +425,13 @@ class NoteTrainer:
         self.study_value = self._counter(self.counter_strip, "Повтор", "study", 10, 300, step=10)
         self.mode_strip = tk.Frame(toolbar, bg=PANEL)
         self.mode_buttons: dict[str, tk.Button] = {}
-        for mode, title in (("name", "Назвать"), ("find", "Найти")):
+        for mode, title in (("name", "Назвать"), ("find", "Найти"), ("ear", "На слух")):
             btn = self._button(self.mode_strip, title, lambda m=mode: self.change_mode(m), compact=True)
             btn.pack(side="left", padx=(0, 3))
             self.mode_buttons[mode] = btn
-            Tooltip(btn, "Назвать ноту на указанном ладу." if mode == "name" else
-                    "Найти указанную ноту на нужной струне.")
+            Tooltip(btn, {"name": "Назвать ноту на указанном ладу.",
+                          "find": "Найти названную ноту на указанной струне.",
+                          "ear": "На слух определить высоту и показать её на грифе; 3 повтора."}[mode])
         self.history_button = self._button(toolbar, "История", self.open_history, compact=True)
         Tooltip(self.history_button, "Результаты прошлых тестов и экспорт выбранных запусков.")
         self._toolbar_layout = None
@@ -434,7 +465,7 @@ class NoteTrainer:
         self.board.configure(xscrollcommand=hbar.set)
         self.board.bind("<Button-1>", self._click_board)
         self.board.bind("<Configure>", self._board_resized)
-        Tooltip(self.board, "0 — открытая струна. В повторении щёлкни по ноте, чтобы услышать её.")
+        Tooltip(self.board, "Нажми струну и лад перед тестом или при повторении, чтобы услышать звук.")
 
         quiz_card = tk.Frame(self.content_area, bg=PANEL, padx=9, pady=5,
                              highlightbackground=BORDER, highlightthickness=1)
@@ -473,7 +504,7 @@ class NoteTrainer:
 
     def _layout_toolbar(self, width: int) -> None:
         # Fully single-row on wide windows; compact 2-3 rows on narrow ones.
-        mode = "wide" if width >= 940 else "medium" if width >= 790 else "small"
+        mode = "wide" if width >= 1200 else "medium" if width >= 790 else "small"
         if mode == self._toolbar_layout:
             return
         self._toolbar_layout = mode
@@ -530,6 +561,7 @@ class NoteTrainer:
 
     def _on_close(self) -> None:
         self._cancel_study_timer()
+        self._cancel_ear_sound()
         self._save_preferences()
         self.audio.close()
         self.root.destroy()
@@ -555,8 +587,30 @@ class NoteTrainer:
         tabs.pack(fill="both", expand=True)
         tuning_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
         audio_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
+        fret_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
         tabs.add(tuning_tab, text="Строй")
         tabs.add(audio_tab, text="Аудио")
+        tabs.add(fret_tab, text="Гриф")
+        self._label(fret_tab, "Накладка грифа", 13, TEXT, True).pack(anchor="w")
+        theme_name = {key: p["name"] for key, p in FRETBOARD_THEMES.items()}
+        theme_by_name = {v: k for k, v in theme_name.items()}
+        wood_var = tk.StringVar(value=theme_name[self.fretboard_theme])
+        wood_combo = ttk.Combobox(fret_tab, state="readonly", textvariable=wood_var,
+                                  values=list(theme_by_name), width=24)
+        wood_combo.pack(fill="x", pady=(12, 10))
+        self._label(fret_tab, "Цвета меняют только накладку, не интерфейс теста.", 9, MUTED).pack(anchor="w")
+        swatches = tk.Frame(fret_tab, bg=PANEL)
+        swatches.pack(fill="x", pady=(12, 0))
+        for key, theme in FRETBOARD_THEMES.items():
+            tile = tk.Frame(swatches, bg=theme["neck"], width=90, height=42,
+                            highlightbackground=BORDER, highlightthickness=1)
+            tile.pack(side="left", padx=(0, 7))
+            tile.pack_propagate(False)
+        def preview_wood(event=None):
+            self.fretboard_theme = theme_by_name.get(wood_var.get(), "default")
+            self._draw_board()
+        wood_combo.bind("<<ComboboxSelected>>", preview_wood)
+        original_wood = self.fretboard_theme
 
         chosen_preset = tk.StringVar(value=self.preset_name)
         self._label(tuning_tab, "Строй", 13, TEXT, True).pack(anchor="w")
@@ -657,6 +711,8 @@ class NoteTrainer:
             if apply_audio():
                 self._preview_audio(note_choices.index(midi_values[5].get()) + 24, volume.get())
         def restore() -> None:
+            self.fretboard_theme = original_wood
+            self._draw_board()
             ident, latency, buffer, exclusive, old_volume = original
             try:
                 self.audio.configure_output(output_id=ident, latency=latency,
@@ -668,6 +724,7 @@ class NoteTrainer:
         def apply_settings() -> None:
             if not apply_audio():
                 return
+            self.fretboard_theme = theme_by_name.get(wood_var.get(), "default")
             new_tuning = tuple(note_choices.index(v.get()) + 24 for v in midi_values)
             new_preset = chosen_preset.get()
             try:
@@ -774,6 +831,7 @@ class NoteTrainer:
 
     def show_map(self, message: Optional[str] = None) -> None:
         """Preparation starts hidden; the full map is visible only for a timed window."""
+        self._cancel_ear_sound()
         self._cancel_study_timer()
         self.phase = "ready"
         self.checked = False
@@ -826,6 +884,13 @@ class NoteTrainer:
         pool = [Question(row, fret)
                 for row in range(6 - self.active_strings, 6)
                 for fret in range(self.active_frets + 1)]
+        if self.mode == "ear":
+            # One MIDI pitch per question: never require guessing which of two
+            # equivalent string/fret positions was chosen by the generator.
+            unique_midi: dict[int, Question] = {}
+            for q in pool:
+                unique_midi.setdefault(self._pitch(q.row, q.fret), q)
+            pool = list(unique_midi.values())
         if self.mode == "find":
             # With >12 frets the same pitch class reappears on a string;
             # a find-question asks for the pitch, not one arbitrary octave.
@@ -840,8 +905,39 @@ class NoteTrainer:
             questions.extend(batch)
         return questions[:self.question_count]
 
+    def _cancel_ear_sound(self) -> None:
+        if self._ear_sound_after_id is not None:
+            try:
+                self.root.after_cancel(self._ear_sound_after_id)
+            except tk.TclError:
+                pass
+        self._ear_sound_after_id = None
+
+    def _play_ear_question(self) -> None:
+        self._ear_sound_after_id = None
+        if self.phase == "quiz" and self.mode == "ear" and not self.checked:
+            q = self._current()
+            self.audio.play(self._pitch(q.row, q.fret))
+
+    def _schedule_ear_question(self) -> None:
+        self._cancel_ear_sound()
+        if self.phase == "quiz" and self.mode == "ear" and not self.checked:
+            self._ear_sound_after_id = self.root.after(20, self._play_ear_question)
+
+    def replay_ear_note(self) -> bool:
+        if self.phase != "quiz" or self.mode != "ear" or self.checked:
+            return False
+        if self.ear_replays_used >= EAR_REPLAYS:
+            return False
+        self.ear_replays_used += 1
+        self._cancel_ear_sound()
+        self._play_ear_question()
+        self._update_quiz_ui()
+        return True
+
     def start_quiz(self) -> None:
         self._cancel_study_timer()
+        self._cancel_ear_sound()
         self.run_started_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
         self.run_id = uuid4().hex
         self.responses = []
@@ -853,15 +949,19 @@ class NoteTrainer:
         self.mistakes = []
         self.checked = False
         self.guess_fret = None
+        self.guess_row = None
+        self.ear_replays_used = 0
         self.feedback = ""
         self.phase = "quiz"
         self._update_all()
         self.question_started = time.monotonic()
+        self._schedule_ear_question()
 
     def _current(self) -> Question:
         return self.questions[self.index]
 
     def _feedback(self, correct: bool, actual_pc: Optional[int] = None) -> None:
+        self._cancel_ear_sound()
         q = self._current()
         target_pc = self._pitch_class(q.row, q.fret)
         # Record response BEFORE sound synthesis/UI rendering delays.
@@ -869,7 +969,7 @@ class NoteTrainer:
         self.question_started = None
         self.checked = True
         self.feedback_is_correct = correct
-        answer_pc = actual_pc if self.mode == "find" else getattr(self, "_chosen_pc", None)
+        answer_pc = actual_pc if self.mode in ("find", "ear") else getattr(self, "_chosen_pc", None)
         self.responses.append({
             "index": self.index + 1,
             "mode": self.mode,
@@ -878,19 +978,34 @@ class NoteTrainer:
             "expected_note": self._note_name(target_pc),
             "expected_midi": self._pitch(q.row, q.fret),
             "answer_note": self._note_name(answer_pc) if answer_pc is not None else None,
-            "answer_fret": self.guess_fret if self.mode == "find" else None,
+            "answer_fret": self.guess_fret if self.mode in ("find", "ear") else None,
+            "answer_string_number": (int(STRINGS[self.guess_row][0]) if self.guess_row is not None else None),
+            "answer_midi": (self._pitch(self.guess_row, self.guess_fret)
+                            if self.guess_row is not None and self.guess_fret is not None else None),
+            "replays_used": self.ear_replays_used if self.mode == "ear" else None,
             "correct": bool(correct),
             "response_seconds": duration,
         })
         if correct:
             self.correct += 1
             self.feedback = f"Верно · {self._readable_note(target_pc)} · {duration:.2f} с"
-            self.audio.play(self._pitch(q.row, self.guess_fret if self.mode == "find" and self.guess_fret is not None else q.fret))
+            self.audio.play(self._pitch(self.guess_row, self.guess_fret)
+                            if self.mode in ("find", "ear") and self.guess_row is not None and self.guess_fret is not None
+                            else self._pitch(q.row, q.fret))
         else:
             n = STRINGS[q.row][0]
             if self.mode == "name":
                 self.feedback = f"{self._readable_note(target_pc)} · {duration:.2f} с"
                 self.mistakes.append(f"{n}-я струна, лад {q.fret}: {self._readable_note(target_pc)}")
+            elif self.mode == "ear":
+                positions = [(int(STRINGS[r][0]), fret)
+                             for r in range(6 - self.active_strings, 6)
+                             for fret in range(self.active_frets + 1)
+                             if self._pitch(r, fret) == self._pitch(q.row, q.fret)]
+                options = ", ".join(f"{string}-я/{fret}" for string, fret in positions)
+                self.feedback = (f"{self._readable_note(target_pc)} · {midi_label(self._pitch(q.row, q.fret))} "
+                                 f"(позиции: {options}) · {duration:.2f} с")
+                self.mistakes.append(f"На слух: {self.feedback}")
             else:
                 valid = [f for f in range(self.active_frets + 1)
                          if self._pitch_class(q.row, f) == target_pc]
@@ -898,8 +1013,9 @@ class NoteTrainer:
                 self.feedback = (f"{self._readable_note(actual_pc)} → {self._readable_note(target_pc)} "
                                  f"(лад: {frets}) · {duration:.2f} с")
                 self.mistakes.append(f"{n}-я струна: найти {self._readable_note(target_pc)} (лады {frets})")
-            wrong_fret = self.guess_fret if self.mode == "find" and self.guess_fret is not None else q.fret
-            self.audio.play(self._pitch(q.row, wrong_fret), buzzing=True)
+            self.audio.play(self._pitch(self.guess_row, self.guess_fret)
+                            if self.guess_row is not None and self.guess_fret is not None
+                            else self._pitch(q.row, q.fret), buzzing=True)
         self._update_all()
 
     def answer_name(self, pitch_class: int) -> None:
@@ -910,21 +1026,25 @@ class NoteTrainer:
 
     def _click_board(self, event: tk.Event) -> None:
         x = self.board.canvasx(event.x)
-        fret = int(x // self.cell_width)
+        fret = fret_from_x(x, self.cell_width)
         row = int((event.y - TOP) // ROW_H)
         if not (0 <= fret <= self.active_frets and 0 <= row < 6 and self._active(row)):
             return
-        if self.phase == "study" and self.study_deadline is not None and time.monotonic() < self.study_deadline:
+        if self.phase == "ready" or (self.phase == "study" and self.study_deadline is not None
+                                      and time.monotonic() < self.study_deadline):
             self.audio.play(self._pitch(row, fret))
             return
-        if self.phase != "quiz" or self.checked or self.mode != "find":
+        if self.phase != "quiz" or self.checked or self.mode not in ("find", "ear"):
             return
         q = self._current()
-        if row != q.row:
-            return  # Target string is fixed; grey and other rows do not answer.
+        if self.mode == "find" and row != q.row:
+            return  # In this mode a target string is specified.
         self.guess_fret = fret
+        self.guess_row = row
         pc = self._pitch_class(row, fret)
-        self._feedback(pc == self._pitch_class(q.row, q.fret), actual_pc=pc)
+        correct = (self._pitch(row, fret) == self._pitch(q.row, q.fret)) if self.mode == "ear" else (
+            pc == self._pitch_class(q.row, q.fret))
+        self._feedback(correct, actual_pc=pc)
 
     def abort_quiz(self) -> None:
         if self.phase == "quiz" and messagebox.askyesno(
@@ -937,6 +1057,8 @@ class NoteTrainer:
         self.index += 1
         self.checked = False
         self.guess_fret = None
+        self.guess_row = None
+        self.ear_replays_used = 0
         self.feedback = ""
         if self.index >= len(self.questions):
             self.phase = "result"
@@ -944,11 +1066,12 @@ class NoteTrainer:
         self._update_all()
         if self.phase == "quiz":
             self.question_started = time.monotonic()
+            self._schedule_ear_question()
 
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.4.3",
+            "app_version": "0.4.7",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -960,6 +1083,8 @@ class NoteTrainer:
                 "question_count": len(self.questions),
                 "study_seconds": self.study_seconds,
                 "mode": self.mode,
+                "fretboard_theme": self.fretboard_theme,
+                "ear_max_replays": EAR_REPLAYS if self.mode == "ear" else None,
             },
             "questions": self.responses[:],
         }
@@ -1024,7 +1149,7 @@ class NoteTrainer:
             indexed[item_id] = run
             tree.insert("", "end", iid=item_id, values=(
                 str(run.get("finished_at", ""))[:19].replace("T", " "),
-                "Нота" if cfg.get("mode")=="name" else "Найти",
+                {"name": "Нота", "find": "Найти", "ear": "На слух"}.get(cfg.get("mode"), "?"),
                 f"{cfg.get('active_strings','?')} стр. / {cfg.get('active_frets','?')} л.",
                 f"{stat['correct']}/{stat['total']} ({stat['accuracy_percent']}%)",
                 f"{stat['mean_seconds']:.2f} с" if stat['mean_seconds'] is not None else "—",
@@ -1088,15 +1213,14 @@ class NoteTrainer:
             btn.config(bg=ACCENT if selected else BUTTON_BG,
                        fg="#072139" if selected else TEXT)
         if self.board.winfo_width() > 1:
-            self.cell_width = max(CELL_W, min(120, self.board.winfo_width() // (self.active_frets + 1)))
+            self.cell_width = max(CELL_W, min(120, (self.board.winfo_width() - OPEN_WIDTH) // self.active_frets))
         self._draw_board()
         self._update_quiz_ui()
 
     def _board_resized(self, event) -> None:
         usable = max(1, int(event.width))
-        count = self.active_frets + 1
-        # Never compress below the readable default; expand to use space instead.
-        desired = max(CELL_W, min(120, usable // count))
+        # The open-string area stays narrow while fretted cells expand.
+        desired = max(CELL_W, min(120, (usable - OPEN_WIDTH) // self.active_frets))
         if desired != self.cell_width:
             self.cell_width = desired
             self._draw_board()
@@ -1104,23 +1228,23 @@ class NoteTrainer:
     def _draw_board(self) -> None:
         self.board.delete("all")
         self.string_labels.delete("all")
-        width = (self.active_frets + 1) * self.cell_width
+        width = OPEN_WIDTH + self.active_frets * self.cell_width
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
         self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ")
         self.board_hint.config(text=f"{self.active_strings}/6 струн · 0–{self.active_frets}")
         for fret in range(self.active_frets + 1):
-            x0 = fret * self.cell_width
-            self.board.create_text(x0 + self.cell_width / 2, 12, text=str(fret),
+            self.board.create_text(fret_center(fret, self.cell_width), 12, text=str(fret),
                                    fill=MUTED, font=(FONT, 10, "bold"))
 
         # Continuous fretboard surface.  Only real strings run horizontally:
         # there are no horizontal lane outlines between the strings.
         neck_bottom = TOP + ROW_H * 6
+        wood = FRETBOARD_THEMES[self.fretboard_theme]
         self.board.create_rectangle(0, TOP, width, neck_bottom,
-                                    fill=CELL_ACTIVE, outline='', tags=('fretboard',))
+                                    fill=wood["neck"], outline='', tags=('fretboard',))
         # The open string is outside the fretted neck, before the real nut.
-        self.board.create_rectangle(0, TOP, self.cell_width - 3, neck_bottom,
-                                    fill='#101c2a', outline='', tags=('open_area',))
+        self.board.create_rectangle(0, TOP, OPEN_WIDTH - 3, neck_bottom,
+                                    fill=wood["open"], outline='', tags=('open_area',))
         for row, (num, _letter, _ru, _pc) in enumerate(STRINGS):
             pc_open = self._pitch_class(row, 0)
             active = self._active(row)
@@ -1133,16 +1257,16 @@ class NoteTrainer:
                                            anchor='w', fill=MUTED if active else FAINT, font=(FONT, 8))
             if not active:
                 self.board.create_rectangle(0, y0, width, y0 + ROW_H,
-                                            fill=blend_hex(CELL_ACTIVE, BG, .55), outline='',
+                                            fill=blend_hex(wood["neck"], wood["inactive"], .40), outline='',
                                             tags=('inactive_overlay',))
         # The nut separates fret 0 (open) from fret 1.  Each later fret wire
         # is thinner and does not quite reach the neck's upper/lower edge.
-        self.board.create_rectangle(self.cell_width - 3, TOP + 2, self.cell_width + 2,
+        self.board.create_rectangle(OPEN_WIDTH - 3, TOP + 2, OPEN_WIDTH + 2,
                                     neck_bottom - 2, fill='#d5dfe8', outline='', tags=('nut',))
         for fret in range(2, self.active_frets + 1):
-            x = fret * self.cell_width
+            x = fret_start(fret, self.cell_width)
             self.board.create_line(x, TOP + 7, x, neck_bottom - 7,
-                                   fill='#8497a9', width=1, tags=('fret_wire',))
+                                   fill=wood["wire"], width=1, tags=('fret_wire',))
         # Standard guitar position markers: single 3/5/7/9 etc, double 12/24.
         # White markers remain clearly visible even when those strings are grey.
         dot_radius = min(4.7, ROW_H * .15)
@@ -1150,7 +1274,7 @@ class NoteTrainer:
             for cx, cy in fret_inlay_centers(fret, self.cell_width):
                 self.board.create_oval(cx - dot_radius, cy - dot_radius,
                                        cx + dot_radius, cy + dot_radius,
-                                       fill="#f1f5fa", outline="#a8b8c9", width=1,
+                                       fill=wood["dot"], outline=wood["dot_outline"], width=1,
                                        tags=("fret_inlay", f"fret_inlay_{fret}"))
 
         # Six uninterrupted strings from open-string area to the end of neck.
@@ -1158,7 +1282,7 @@ class NoteTrainer:
         for row, thickness in enumerate(string_widths):
             y = TOP + row * ROW_H + ROW_H / 2
             self.board.create_line(6, y, width - 6, y, width=thickness,
-                                   fill='#b8d4df' if self._active(row) else '#506273',
+                                   fill=wood["string"] if self._active(row) else wood["muted"],
                                    capstyle=tk.ROUND, tags=('guitar_string', f'guitar_string_{row + 1}'))
 
         # Foreground: notes and quiz target.  These are true circles, even when
@@ -1168,9 +1292,10 @@ class NoteTrainer:
             y0 = TOP + row * ROW_H
             ymid = y0 + ROW_H / 2
             for fret in range(self.active_frets + 1):
-                x0 = fret * self.cell_width
-                center_x = x0 + self.cell_width / 2
-                disc = note_disc_bbox(center_x, ymid, self.cell_width)
+                x0 = fret_start(fret, self.cell_width)
+                span = fret_width(fret, self.cell_width)
+                center_x = fret_center(fret, self.cell_width)
+                disc = note_disc_bbox(center_x, ymid, span)
                 pc = self._pitch_class(row, fret)
                 is_target = self.phase == "quiz" and self.mode == "name" and not self.checked and (
                     row == self._current().row and fret == self._current().fret)
@@ -1180,6 +1305,8 @@ class NoteTrainer:
                     if self.mode == "name" and (row, fret) == (q.row, q.fret):
                         show_note = True
                     if self.mode == "find" and row == q.row and pc == self._pitch_class(q.row, q.fret):
+                        show_note = True
+                    if self.mode == "ear" and self._pitch(row, fret) == self._pitch(q.row, q.fret):
                         show_note = True
                 if show_note:
                     highlight = self.phase == "quiz" and self.checked
@@ -1196,19 +1323,19 @@ class NoteTrainer:
                                            width=2, tags=("note_disc",))
                     self.board.create_text(center_x, ymid, text="?",
                                            fill=TEXT, font=(FONT, 14, "bold"))
-                if active and self.phase == "quiz" and self.mode == "find":
+                if active and self.phase == "quiz" and self.mode in ("find", "ear"):
                     q = self._current()
-                    if row == q.row and not self.checked:
-                        self.board.create_rectangle(x0 + 3, y0 + 3, x0 + self.cell_width - 3,
+                    if self.mode == "find" and row == q.row and not self.checked:
+                        self.board.create_rectangle(x0 + 3, y0 + 3, x0 + span - 3,
                                                     y0 + ROW_H - 3, outline="#4188ad", width=2)
-                    if self.checked and row == q.row and fret == self.guess_fret:
-                        self.board.create_rectangle(x0 + 2, y0 + 2, x0 + self.cell_width - 2,
+                    if self.checked and row == self.guess_row and fret == self.guess_fret:
+                        self.board.create_rectangle(x0 + 2, y0 + 2, x0 + span - 2,
                                                     y0 + ROW_H - 2,
                                                     outline=GREEN if self.feedback_is_correct else RED,
                                                     width=3)
         if self.phase == "quiz":
             q = self._current()
-            x0 = q.fret * self.cell_width
+            x0 = fret_start(q.fret, self.cell_width)
             if self.mode == "name":
                 self.board.xview_moveto(max(0, x0 - 2 * self.cell_width) / max(width, 1))
             # In 'find' mode don't reveal the target fret by auto-scrolling.
@@ -1362,8 +1489,25 @@ class NoteTrainer:
                     self._render_circle_answers(self.quiz_body,target)
                 else:
                     self._render_row_answers(self.quiz_body,target)
-            else:
+            elif self.mode == "find":
                 self._render_find_target(target, string)
+            else:
+                block = tk.Frame(self.quiz_body, bg="#172d43", padx=12, pady=10,
+                                 highlightthickness=2, highlightbackground=ACCENT)
+                block.pack(fill="x", pady=(3, 5))
+                self._label(block, "НА СЛУХ · НАЙДИ ВЫСОТУ НА ГРИФЕ", 10, ACCENT, True,
+                            bg="#172d43").pack(anchor="center", pady=(0, 8))
+                button = self._button(block,
+                    f"♫  Слушать ещё   {max(0, EAR_REPLAYS - self.ear_replays_used)}/{EAR_REPLAYS}",
+                    self.replay_ear_note, primary=True)
+                button.pack(anchor="center", pady=(1, 7))
+                if self.checked or self.ear_replays_used >= EAR_REPLAYS:
+                    button.config(state="disabled")
+                Tooltip(button, "Начальное звучание автоматическое; ещё 3 повтора на каждый вопрос.")
+                if self.checked:
+                    self._label(block, f"{self._note_name(target)} · {midi_label(self._pitch(q.row, q.fret))}",
+                                14, GREEN if self.feedback_is_correct else AMBER, True,
+                                bg="#172d43").pack(anchor="center")
             if self.checked:
                 prefix = "✓ " if self.feedback_is_correct else "✕ "
                 self._label(self.action_row,prefix+self.feedback,10,GREEN if self.feedback_is_correct else AMBER,

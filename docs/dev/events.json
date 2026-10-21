@@ -1063,6 +1063,86 @@
       "action": "github.commit",
       "status": "success",
       "detail": "v0.4.6 atomic code + tests + dev journal in main; no GitHub Actions or documentation edits"
+    },
+    {
+      "id": "VG-20261022-0130",
+      "date": "2026-10-22",
+      "action": "local.verify",
+      "status": "success",
+      "path": "tests/",
+      "detail": "v0.4.7: 64 unit tests passed; GUI ear/wood/prereview, core quiz smoke, fretboard and 6-size bounds smoke passed under Xvfb; Windows hardware listen remains manual"
+    },
+    {
+      "id": "VG-20261022-0131",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0132",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0133",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_pluck_and_fret_markers.py",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0134",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_smoke.py",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0135",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_fretboard_refactor_smoke.py",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0136",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_ear_and_fret_theme.py",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0137",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_ear_theme_smoke.py",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0138",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_ear_layout_smoke.py",
+      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+    },
+    {
+      "id": "VG-20261022-0139",
+      "date": "2026-10-22",
+      "action": "github.commit",
+      "status": "success",
+      "path": "docs/dev/events.json",
+      "detail": "v0.4.7 atomic source/tests/journal commit to main; no GitHub Actions or frozen docs changed"
     }
   ]
 }

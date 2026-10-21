@@ -6,7 +6,7 @@ from tkinter import ttk
 from unittest.mock import MagicMock
 from time import monotonic
 
-from vguitar_notes import NoteTrainer, TUNINGS, CELL_W, ROW_H, TOP
+from vguitar_notes import NoteTrainer, TUNINGS, CELL_W, ROW_H, TOP, fret_center, OPEN_WIDTH
 from vguitar_storage import list_runs
 
 with tempfile.TemporaryDirectory() as config:
@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory() as config:
     app.start_study()
     root.update()
     assert app.phase == 'study' and app.study_deadline is not None
-    app._click_board(type('E', (), {'x': app.cell_width//2, 'y': TOP + 5*ROW_H + 20})())
+    app._click_board(type('E', (), {'x': OPEN_WIDTH//2, 'y': TOP + 5*ROW_H + 20})())
     assert app.audio.play.call_args.args[0] == 40
     # Simulate expiry without sleeping.
     app.study_deadline = monotonic() - 0.1
@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory() as config:
     app.change_mode('find')
     app.start_quiz()
     q = app._current()
-    app._click_board(type('E', (), {'x':q.fret*app.cell_width-app.board.canvasx(0)+app.cell_width//2,'y':TOP+q.row*ROW_H+20})())
+    app._click_board(type('E', (), {'x':fret_center(q.fret, app.cell_width)-app.board.canvasx(0),'y':TOP+q.row*ROW_H+20})())
     assert app.responses[0]['answer_fret']==q.fret
     assert app.checked and app.feedback_is_correct
     app.show_map()
