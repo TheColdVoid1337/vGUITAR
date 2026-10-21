@@ -136,6 +136,7 @@ def find_output_devices(sd: Any) -> tuple[list[dict[str, Any]], dict[str, Any] |
         results.append({
             'index': i, 'name': str(device.get('name', 'unknown')),
             'hostapi': host_name,
+            'id': f"{host_name}|{device.get('name', 'unknown')}",
             'samplerate': int(round(float(device.get('default_samplerate', 48000)))) or 48000,
             'channels': 2 if int(device.get('max_output_channels', 0)) >= 2 else 1,
             'wasapi': 'WASAPI' in host_name.upper(),
@@ -212,7 +213,8 @@ class PersistentCueStream:
 
     FADE_MS = 18
 
-    def __init__(self, sd: Any, device: dict[str, Any]) -> None:
+    def __init__(self, sd: Any, device: dict[str, Any], *, latency: str = 'high',
+                 blocksize: int = 0, exclusive: bool = False) -> None:
         self.device = device
         self.channels = int(device['channels'])
         self.rate = int(device['samplerate'])
@@ -226,10 +228,14 @@ class PersistentCueStream:
         self.callback_flags: list[str] = []
         self.callback_count = 0
         self.underflows = 0
+        extras = None
+        if exclusive and device['wasapi']:
+            extras = sd.WasapiSettings(exclusive=True)
         self._stream = sd.RawOutputStream(
             device=device['index'], samplerate=self.rate,
             channels=self.channels, dtype='int16',
-            latency='high', blocksize=0, callback=self._callback,
+            latency=latency, blocksize=blocksize, callback=self._callback,
+            extra_settings=extras,
         )
         try:
             self._stream.start()
@@ -308,7 +314,13 @@ class AudioPlayer:
     renders in its own worker so Tk never blocks.  PCM is kept in an LRU cache.
     """
 
-    def __init__(self, volume: int = 65) -> None:
+    def __init__(self, volume: int = 65, *, output_id: str = '',
+                 latency: str = 'high', blocksize: int = 0,
+                 exclusive: bool = False) -> None:
+        self.output_id = str(output_id)
+        self.latency = latency if latency in ('high', 'low') else 'high'
+        self.blocksize = blocksize if blocksize in (0, 256, 512, 1024, 2048) else 0
+        self.exclusive = bool(exclusive)
         self.volume = max(0, min(100, int(volume)))
         self._backend: str | None = None
         self._sd: Any = None
@@ -341,7 +353,11 @@ class AudioPlayer:
                 return
             self._sd = sd
             try:
-                self.available_devices, self._device = find_output_devices(sd)
+                self.available_devices, default = find_output_devices(sd)
+                requested = next((d for d in self.available_devices if d.get('id') == self.output_id), None)
+                self._device = requested or default
+                if self.output_id and requested is None:
+                    self.last_error = 'Saved audio output not found; using automatic output'
             except Exception as exc:
                 self.last_error = f'Cannot enumerate PortAudio devices: {exc}'
                 return
@@ -362,6 +378,56 @@ class AudioPlayer:
         if self._backend is None:
             self.last_error = 'No system audio player found'
 
+
+    def list_outputs(self) -> list[dict[str, Any]]:
+        """Refresh available PortAudio outputs without disrupting playback."""
+        if self._sd is None:
+            return []
+        try:
+            devices, _default = find_output_devices(self._sd)
+            self.available_devices = devices
+        except Exception as exc:
+            self.last_error = f'Output enumeration failed: {exc}'
+        return list(self.available_devices)
+
+    def configure_output(self, *, output_id: str, latency: str = 'high',
+                         blocksize: int = 0, exclusive: bool = False) -> None:
+        """Switch device/options, releasing only the old stream (not the player)."""
+        if latency not in ('high', 'low'):
+            raise ValueError('Invalid latency setting')
+        if blocksize not in (0, 256, 512, 1024, 2048):
+            raise ValueError('Unsupported block size')
+        devices = self.list_outputs()
+        if output_id and not any(d['id'] == output_id for d in devices):
+            raise ValueError('Selected output is no longer available')
+        new_device = (next((d for d in devices if d['id'] == output_id), None)
+                      if output_id else find_output_devices(self._sd)[1] if self._sd else None)
+        if exclusive and (new_device is None or not new_device['wasapi']):
+            raise ValueError('Exclusive mode requires WASAPI output')
+        if (self.output_id, self.latency, self.blocksize, self.exclusive) == (output_id, latency, blocksize, exclusive):
+            return
+        # Invalidate pending rendering and detach before closing; callbacks
+        # may acquire their own locks and must not race a new stream.
+        with self._lock:
+            self._ticket += 1
+            self._preload_generation += 1
+            stream, self._cue_stream = self._cue_stream, None
+            self.output_id, self.latency = output_id, latency
+            self.blocksize, self.exclusive = blocksize, exclusive
+            self._device = new_device
+            if new_device is not None:
+                self.device_name, self.host_api_name = new_device['name'], new_device['hostapi']
+                self._backend = 'wasapi' if new_device['wasapi'] else 'portaudio'
+            self._cache.clear()
+        if stream is not None:
+            stream.close()
+        if sys.platform == 'win32' and self._device is None:
+            self.last_result = 'error'
+            self.last_error = 'No output device found'
+        else:
+            self.last_result = 'idle'
+            self.last_error = ''
+
     @property
     def available(self) -> bool:
         return self._backend is not None
@@ -377,7 +443,9 @@ class AudioPlayer:
             try:
                 if self._sd is None or self._device is None:
                     raise AudioPlaybackError('WASAPI device not configured')
-                self._cue_stream = PersistentCueStream(self._sd, self._device)
+                self._cue_stream = PersistentCueStream(
+                    self._sd, self._device, latency=self.latency,
+                    blocksize=self.blocksize, exclusive=self.exclusive)
                 self.last_error = ''
                 return True
             except Exception as exc:
@@ -393,6 +461,8 @@ class AudioPlayer:
         stream = self._cue_stream
         return (f'platform={sys.platform}; backend={self._backend or "none"}; used={self.last_used_backend}; '
                 f'device={desc}; outputs={detected or "none"}; volume={self.volume}; '
+                f'output_id={self.output_id or "auto"}; latency={self.latency}; '
+                f'blocksize={self.blocksize}; exclusive={self.exclusive}; '
                 f'stream={"open" if stream else "closed"}; '
                 f'callback_count={stream.callback_count if stream else 0}; '
                 f'underruns={stream.underflows if stream else 0}; '

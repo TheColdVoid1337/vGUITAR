@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """vGUITAR Note Trainer — an offline fretboard study and quiz app.
 
-Python 3.9+, Tkinter only. No Internet, accounts, or third-party modules.
+Python 3.9+, Tkinter and sounddevice on Windows. Offline; no accounts.
 """
 
 from __future__ import annotations
@@ -245,10 +245,18 @@ class NoteTrainer:
             except OSError:
                 pass
         self.preset_name, self.tuning, initial_volume = read_settings(settings_path())
-        lesson = read_preferences().get("lesson", {})
+        preferences = read_preferences()
+        lesson = preferences.get("lesson", {})
         if not isinstance(lesson, dict):
             lesson = {}
-        self.audio = AudioPlayer(initial_volume)
+        audio_settings = preferences.get('audio', {})
+        if not isinstance(audio_settings, dict):
+            audio_settings = {}
+        self.audio = AudioPlayer(initial_volume,
+            output_id=str(audio_settings.get('output_id', '')),
+            latency=str(audio_settings.get('latency', 'high')),
+            blocksize=audio_settings.get('blocksize', 0),
+            exclusive=bool(audio_settings.get('exclusive', False)))
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.active_strings = self._bounded(lesson.get("active_strings", 2), 1, 6, 2)
@@ -282,6 +290,7 @@ class NoteTrainer:
         self._create_layout()
         self._update_all()
         self.root.bind("<Return>", self._enter_key)
+        self.root.bind("<space>", self._space_key)
         self.root.bind("<Escape>", lambda event: self.show_map())
         self.root.bind_all("<MouseWheel>", self._mousewheel)
         self.root.bind_all("<Button-4>", lambda event: self.page_scroll(-1))
@@ -302,6 +311,12 @@ class NoteTrainer:
                 "preset": self.preset_name,
                 "tuning_midi": list(self.tuning),
                 "volume": self.audio.volume,
+                "audio": {
+                    "output_id": self.audio.output_id,
+                    "latency": self.audio.latency,
+                    "blocksize": self.audio.blocksize,
+                    "exclusive": self.audio.exclusive,
+                },
                 "lesson": {
                     "active_strings": self.active_strings,
                     "active_frets": self.active_frets,
@@ -526,101 +541,155 @@ class NoteTrainer:
             return
         window = tk.Toplevel(self.root, bg=BG)
         self._settings_window = window
-        window.title("vGUITAR — Строй и звук")
-        window.geometry("550x690")
-        window.minsize(500, 640)
+        window.title("vGUITAR — Настройки")
+        sw, sh = window.winfo_screenwidth(), window.winfo_screenheight()
+        window.geometry(f"{min(560, sw - 40)}x{min(620, sh - 85)}")
+        window.minsize(495, 450)
         window.transient(self.root)
         window.grab_set()
-        frame = tk.Frame(window, bg=PANEL, padx=20, pady=18)
-        frame.pack(fill="both", expand=True, padx=14, pady=14)
-        self._label(frame, "НАСТРОЙКИ", 16, TEXT, True).pack(anchor="w")
-        self._label(frame, "Строй влияет на карту, вопросы и высоту звука.", 10, MUTED).pack(anchor="w", pady=(4, 12))
+        frame = tk.Frame(window, bg=PANEL, padx=12, pady=12)
+        frame.pack(fill="both", expand=True, padx=9, pady=9)
+
+        # Two tabs keep the configuration window within laptop screen height.
+        tabs = ttk.Notebook(frame)
+        tabs.pack(fill="both", expand=True)
+        tuning_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
+        audio_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
+        tabs.add(tuning_tab, text="Строй")
+        tabs.add(audio_tab, text="Аудио")
 
         chosen_preset = tk.StringVar(value=self.preset_name)
-        self._label(frame, "Готовый строй", 10, MUTED).pack(anchor="w")
-        preset_combo = ttk.Combobox(frame, state="readonly", textvariable=chosen_preset,
-                                   values=[*TUNINGS, CUSTOM_TUNING], width=48)
-        preset_combo.pack(fill="x", pady=(4, 12))
-        self._label(frame, "Открытые струны (сверху тонкая 1-я, снизу толстая 6-я)", 10, MUTED).pack(anchor="w")
+        self._label(tuning_tab, "Строй", 13, TEXT, True).pack(anchor="w")
+        preset_combo = ttk.Combobox(tuning_tab, state="readonly", textvariable=chosen_preset,
+                                    values=[*TUNINGS, CUSTOM_TUNING])
+        preset_combo.pack(fill="x", pady=(6, 12))
         note_choices = [midi_label(n) for n in range(24, 97)]
         midi_values = [tk.StringVar(value=midi_label(n)) for n in self.tuning]
-        string_boxes = []
-        string_frame = tk.Frame(frame, bg=PANEL)
-        string_frame.pack(fill="x", pady=(7, 10))
-        for i in range(6):
-            line = tk.Frame(string_frame, bg=PANEL)
-            line.pack(fill="x", pady=2)
-            self._label(line, f"{i+1}-я струна", 10, TEXT, width=13, anchor="w").pack(side="left")
-            combo = ttk.Combobox(line, state="readonly", width=15, values=note_choices,
-                                 textvariable=midi_values[i])
-            combo.pack(side="left", padx=10)
-            string_boxes.append(combo)
-
+        rows = tk.Frame(tuning_tab, bg=PANEL)
+        rows.pack(fill="x")
         updating = False
         def preset_changed(event=None):
             nonlocal updating
             if chosen_preset.get() in TUNINGS:
                 updating = True
-                for variable, midi in zip(midi_values, TUNINGS[chosen_preset.get()]):
-                    variable.set(midi_label(midi))
+                for v, midi in zip(midi_values, TUNINGS[chosen_preset.get()]):
+                    v.set(midi_label(midi))
                 updating = False
-
         def note_changed(event=None):
             if not updating:
                 chosen_preset.set(CUSTOM_TUNING)
+        preset_combo.bind('<<ComboboxSelected>>', preset_changed)
+        for i, var in enumerate(midi_values):
+            line = tk.Frame(rows, bg=PANEL)
+            line.pack(fill="x", pady=3)
+            self._label(line, f"{i + 1}-я струна", 10, TEXT, width=12, anchor='w').pack(side="left")
+            combo = ttk.Combobox(line, state='readonly', textvariable=var,
+                                 values=note_choices, width=19)
+            combo.pack(side='left', padx=8)
+            combo.bind('<<ComboboxSelected>>', note_changed)
 
-        preset_combo.bind("<<ComboboxSelected>>", preset_changed)
-        for combo in string_boxes:
-            combo.bind("<<ComboboxSelected>>", note_changed)
+        self._label(audio_tab, "Аудиоустройство", 13, TEXT, True).pack(anchor="w")
+        device_choices: dict[str, str] = {}
+        selected_id = self.audio.output_id
+        device_var = tk.StringVar()
+        device_box = ttk.Combobox(audio_tab, textvariable=device_var, state='readonly')
+        def refresh_outputs() -> None:
+            device_choices.clear()
+            device_choices['Авто · WASAPI'] = ''
+            for device in self.audio.list_outputs():
+                title = f"{device['name']} · {device['hostapi']}"
+                if title in device_choices:
+                    title += f" #{device['index']}"
+                device_choices[title] = device['id']
+            device_box.configure(values=list(device_choices))
+            matching = next((k for k, v in device_choices.items() if v == selected_id),
+                            'Авто · WASAPI')
+            device_var.set(matching)
+        device_box.pack(fill="x", pady=(9, 7))
+        refresh_outputs()
+        refresh_button = self._button(audio_tab, 'Обновить список', refresh_outputs, compact=True)
+        refresh_button.pack(anchor='w', pady=(0, 12))
+        Tooltip(device_box, 'PortAudio outputs. Auto prefers the Windows WASAPI default.')
 
         volume = tk.IntVar(value=self.audio.volume)
-        volume_line = tk.Frame(frame, bg=PANEL)
-        volume_line.pack(fill="x", pady=(12, 5))
-        self._label(volume_line, "Громкость", 11, TEXT, True).pack(side="left")
-        volume_label = self._label(volume_line, str(volume.get()) + "%", 11, ACCENT)
-        volume_label.pack(side="right")
-        def volume_changed(value):
-            volume_label.config(text=f"{round(float(value))}%")
-        tk.Scale(frame, from_=0, to=100, resolution=1, orient="horizontal",
-                 variable=volume, command=volume_changed,
-                 bg=PANEL, fg=TEXT, troughcolor=CELL_ACTIVE, highlightthickness=0,
-                 activebackground=ACCENT, length=430).pack(fill="x")
-        self._label(frame, "Выход: " + self.audio.host_api_name + " · " + self.audio.device_name,
-                    9, MUTED, wraplength=485, justify="left").pack(anchor="w")
-        if not self.audio.available:
-            self._label(frame, "WASAPI недоступен: запусти RUN.bat для установки sounddevice.",
-                        9, AMBER).pack(anchor="w")
+        self._label(audio_tab, 'Громкость', 10, TEXT, True).pack(anchor='w')
+        tk.Scale(audio_tab, from_=0, to=100, resolution=1, orient='horizontal',
+                 variable=volume, bg=PANEL, fg=TEXT, troughcolor=CELL_ACTIVE,
+                 highlightthickness=0, activebackground=ACCENT).pack(fill='x')
+        setting_line = tk.Frame(audio_tab, bg=PANEL)
+        setting_line.pack(fill='x', pady=(12, 8))
+        self._label(setting_line, 'Задержка', 10, MUTED).grid(row=0, column=0, sticky='w')
+        self._label(setting_line, 'Буфер', 10, MUTED).grid(row=0, column=1, sticky='w', padx=(14, 0))
+        latency_var = tk.StringVar(value='Надёжная' if self.audio.latency == 'high' else 'Низкая')
+        ttk.Combobox(setting_line, values=['Надёжная', 'Низкая'], state='readonly',
+                     textvariable=latency_var, width=19).grid(row=1, column=0, sticky='ew', pady=4)
+        block_values = {'Авто': 0, '256': 256, '512': 512, '1024': 1024, '2048': 2048}
+        block_var = tk.StringVar(value=next((k for k, v in block_values.items()
+                                             if v == self.audio.blocksize), 'Авто'))
+        ttk.Combobox(setting_line, values=list(block_values), state='readonly',
+                     textvariable=block_var, width=15).grid(row=1, column=1, sticky='ew', padx=(14, 0), pady=4)
+        setting_line.grid_columnconfigure(0, weight=1)
+        setting_line.grid_columnconfigure(1, weight=1)
+        exclusive_var = tk.BooleanVar(value=self.audio.exclusive)
+        tk.Checkbutton(audio_tab, text='WASAPI Exclusive', variable=exclusive_var,
+                       bg=PANEL, fg=TEXT, selectcolor=BUTTON_BG, activebackground=PANEL,
+                       activeforeground=TEXT).pack(anchor='w', pady=(4, 3))
+        self._label(audio_tab, 'Shared: по умолчанию · Exclusive: устройство занято только vGUITAR',
+                    9, MUTED).pack(anchor='w')
 
-        bottom = tk.Frame(frame, bg=PANEL)
-        bottom.pack(side="bottom", fill="x", pady=(12, 0))
-        def apply_settings():
+        original = (self.audio.output_id, self.audio.latency, self.audio.blocksize,
+                    self.audio.exclusive, self.audio.volume)
+        def chosen_audio() -> tuple[str, str, int, bool]:
+            return (device_choices.get(device_var.get(), ''),
+                    'low' if latency_var.get() == 'Низкая' else 'high',
+                    block_values[block_var.get()], exclusive_var.get())
+        def apply_audio() -> bool:
+            try:
+                ident, latency, buffer, exclusive = chosen_audio()
+                self.audio.configure_output(output_id=ident, latency=latency,
+                                            blocksize=buffer, exclusive=exclusive)
+                self.audio.volume = volume.get()
+                return True
+            except (ValueError, OSError, RuntimeError) as exc:
+                messagebox.showerror('Аудио', str(exc), parent=window)
+                return False
+        def test_audio() -> None:
+            if apply_audio():
+                self._preview_audio(note_choices.index(midi_values[5].get()) + 24, volume.get())
+        def restore() -> None:
+            ident, latency, buffer, exclusive, old_volume = original
+            try:
+                self.audio.configure_output(output_id=ident, latency=latency,
+                                            blocksize=buffer, exclusive=exclusive)
+            except ValueError:
+                pass
+            self.audio.volume = old_volume
+            window.destroy()
+        def apply_settings() -> None:
+            if not apply_audio():
+                return
             new_tuning = tuple(note_choices.index(v.get()) + 24 for v in midi_values)
             new_preset = chosen_preset.get()
-            new_volume = volume.get()
             try:
-                write_settings(settings_path(), new_preset, new_tuning, new_volume)
+                write_settings(settings_path(), new_preset, new_tuning, volume.get())
             except OSError as exc:
-                # Keep UI functional even when user config folder is read-only.
-                self.study_message = f"Настройки действуют в этом запуске, но не сохранены: {exc}"
+                self.study_message = f'Не удалось сохранить строй: {exc}'
             changed = new_tuning != self.tuning
             self.preset_name, self.tuning = new_preset, new_tuning
-            self.audio.volume = new_volume
             self._save_preferences()
             if changed:
-                self.show_map("Строй изменён. Изучи обновлённые ноты перед тестом.")
+                self.show_map('Строй изменён. Изучи обновлённые ноты перед тестом.')
             else:
                 self._update_all()
             window.destroy()
 
-        self._button(bottom, "Сохранить", apply_settings, primary=True).pack(side="right")
-        self._button(bottom, "Отмена", window.destroy).pack(side="right", padx=8)
-        test_btn = self._button(bottom, "♫ Тест", lambda: self._preview_audio(
-            note_choices.index(midi_values[5].get()) + 24, volume.get()), compact=True)
-        test_btn.pack(side="left")
-        Tooltip(test_btn, "Сыграть шестую струну через WASAPI; затем показать состояние вывода.")
-        log_btn = self._button(bottom, "Лог звука", self._copy_audio_diagnostic, compact=True)
-        log_btn.pack(side="left", padx=(5, 0))
-        Tooltip(log_btn, "Скопировать состояние аудиосистемы для разбора проблем.")
+        bottom = tk.Frame(frame, bg=PANEL)
+        bottom.pack(fill='x', pady=(10, 0))
+        self._button(bottom, '♫ Тест', test_audio, compact=True).pack(side='left')
+        self._button(bottom, 'Лог звука', self._copy_audio_diagnostic, compact=True).pack(side='left', padx=6)
+        self._button(bottom, 'Сохранить', apply_settings, primary=True).pack(side='right')
+        self._button(bottom, 'Отмена', restore).pack(side='right', padx=7)
+        window.protocol('WM_DELETE_WINDOW', restore)
 
     def _copy_audio_diagnostic(self) -> None:
         self._copy_text("vGUITAR_AUDIO_DIAGNOSTIC\n" + self.audio.diagnostic())
@@ -998,6 +1067,12 @@ class NoteTrainer:
         if self.phase == "quiz" and self.checked:
             self.next_question()
 
+    def _space_key(self, event: tk.Event) -> str | None:
+        if self.phase == "quiz" and self.checked and event.widget.winfo_toplevel() == self.root:
+            self.next_question()
+            return "break"
+        return None
+
     def _update_all(self) -> None:
         self.footer_label.config(text=f"Строй: {self.preset_name}   •   Esc: подготовка   •   ? Справка в меню")
         self.strings_value.config(text=str(self.active_strings))
@@ -1038,36 +1113,36 @@ class NoteTrainer:
             self.board.create_text(x0 + self.cell_width / 2, 12, text=str(fret),
                                    fill=MUTED, font=(FONT, 10, "bold"))
 
-        # Background grid FIRST: the fret inlays must sit on the fretboard,
-        # behind note labels and active answer highlights, not on top of text.
-        for row, (num, letter, ru, base_pc) in enumerate(STRINGS):
+        # Continuous fretboard surface.  Only real strings run horizontally:
+        # there are no horizontal lane outlines between the strings.
+        neck_bottom = TOP + ROW_H * 6
+        self.board.create_rectangle(0, TOP, width, neck_bottom,
+                                    fill=CELL_ACTIVE, outline='', tags=('fretboard',))
+        # The open string is outside the fretted neck, before the real nut.
+        self.board.create_rectangle(0, TOP, self.cell_width - 3, neck_bottom,
+                                    fill='#101c2a', outline='', tags=('open_area',))
+        for row, (num, _letter, _ru, _pc) in enumerate(STRINGS):
             pc_open = self._pitch_class(row, 0)
-            letter, ru = self._note_name(pc_open), self._note_ru(pc_open)
             active = self._active(row)
             y0 = TOP + row * ROW_H
             ymid = y0 + ROW_H / 2
-            label_color = TEXT if active else FAINT
-            self.string_labels.create_text(4, ymid - 7, text=f"{num}-я {letter}",
-                                           anchor="w", fill=label_color,
-                                           font=(FONT, 10, "bold"))
-            self.string_labels.create_text(4, ymid + 8, text=ru,
-                                           anchor="w", fill=MUTED if active else FAINT,
-                                           font=(FONT, 8))
-            for fret in range(self.active_frets + 1):
-                x0 = fret * self.cell_width
-                color = (CELL_ACTIVE if fret % 2 == 0 else CELL_ACTIVE_ALT) if active else (
-                    CELL_INACTIVE if fret % 2 == 0 else CELL_INACTIVE_ALT)
-                self.board.create_rectangle(x0, y0, x0 + self.cell_width, y0 + ROW_H,
-                                            fill=color, outline=BORDER if active else "#27313e",
-                                            width=1)
-                if fret == 0:
-                    self.board.create_rectangle(x0 + self.cell_width - 3, y0,
-                                                x0 + self.cell_width, y0 + ROW_H,
-                                                fill=TEXT if active else FAINT, outline="")
-                self.board.create_line(x0 + 7, ymid, x0 + self.cell_width - 7, ymid,
-                                       fill=blend_hex("#b4d5e4", color, .45 if active else .13),
-                                       width=max(1, 4 - row // 2))
-
+            self.string_labels.create_text(4, ymid - 7, text=f'{num}-я {self._note_name(pc_open)}',
+                                           anchor='w', fill=TEXT if active else FAINT,
+                                           font=(FONT, 10, 'bold'))
+            self.string_labels.create_text(4, ymid + 8, text=self._note_ru(pc_open),
+                                           anchor='w', fill=MUTED if active else FAINT, font=(FONT, 8))
+            if not active:
+                self.board.create_rectangle(0, y0, width, y0 + ROW_H,
+                                            fill=blend_hex(CELL_ACTIVE, BG, .55), outline='',
+                                            tags=('inactive_overlay',))
+        # The nut separates fret 0 (open) from fret 1.  Each later fret wire
+        # is thinner and does not quite reach the neck's upper/lower edge.
+        self.board.create_rectangle(self.cell_width - 3, TOP + 2, self.cell_width + 2,
+                                    neck_bottom - 2, fill='#d5dfe8', outline='', tags=('nut',))
+        for fret in range(2, self.active_frets + 1):
+            x = fret * self.cell_width
+            self.board.create_line(x, TOP + 7, x, neck_bottom - 7,
+                                   fill='#8497a9', width=1, tags=('fret_wire',))
         # Standard guitar position markers: single 3/5/7/9 etc, double 12/24.
         # White markers remain clearly visible even when those strings are grey.
         dot_radius = min(4.7, ROW_H * .15)
@@ -1077,6 +1152,14 @@ class NoteTrainer:
                                        cx + dot_radius, cy + dot_radius,
                                        fill="#f1f5fa", outline="#a8b8c9", width=1,
                                        tags=("fret_inlay", f"fret_inlay_{fret}"))
+
+        # Six uninterrupted strings from open-string area to the end of neck.
+        string_widths = (1.15, 1.35, 1.65, 2.0, 2.4, 3.1)
+        for row, thickness in enumerate(string_widths):
+            y = TOP + row * ROW_H + ROW_H / 2
+            self.board.create_line(6, y, width - 6, y, width=thickness,
+                                   fill='#b8d4df' if self._active(row) else '#506273',
+                                   capstyle=tk.ROUND, tags=('guitar_string', f'guitar_string_{row + 1}'))
 
         # Foreground: notes and quiz target.  These are true circles, even when
         # the window gets much wider than the nominal fret cells.

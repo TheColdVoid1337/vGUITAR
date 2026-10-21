@@ -1001,6 +1001,68 @@
       "detail": "Updated canonical machine-readable asset index in place, preserved original Drive ID and added release v0.4.5",
       "path": "file_index.json",
       "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261022-0122",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+    },
+    {
+      "id": "VG-20261022-0123",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_audio.py",
+      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+    },
+    {
+      "id": "VG-20261022-0124",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+    },
+    {
+      "id": "VG-20261022-0125",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_audio_settings.py",
+      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+    },
+    {
+      "id": "VG-20261022-0126",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_smoke.py",
+      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+    },
+    {
+      "id": "VG-20261022-0127",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_fretboard_refactor_smoke.py",
+      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+    },
+    {
+      "id": "VG-20261022-0128",
+      "date": "2026-10-22",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "59 unit tests passed; GUI smoke, fretboard keyboard/audio-settings smoke, position-dot smoke and six-size layout smoke passed; Windows audio hardware still requires manual listening"
+    },
+    {
+      "id": "VG-20261022-0129",
+      "date": "2026-10-22",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "v0.4.6 atomic code + tests + dev journal in main; no GitHub Actions or documentation edits"
     }
   ]
 }

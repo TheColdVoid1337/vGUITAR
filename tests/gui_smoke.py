@@ -76,11 +76,11 @@ with tempfile.TemporaryDirectory() as config:
             if isinstance(child,ttk.Combobox): combos.append(child)
             descend(child)
     descend(window)
-    assert len(combos)==7
+    assert len(combos)>=10  # 7 tuning comboboxes + output/latency/buffer
     combos[0].set('Drop D (D A D G B E)')
     combos[0].event_generate('<<ComboboxSelected>>')
     root.update()
-    assert 'D2' in combos[-1].get()
+    assert 'D2' in combos[6].get()
     buttons=[]
     def collect(w):
         for child in w.winfo_children():
