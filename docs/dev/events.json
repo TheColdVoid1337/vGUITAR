@@ -1438,6 +1438,68 @@
       "path": "file_index.json",
       "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
       "detail": "Prepared local updated index (13 assets) but connector rejected staged JSON file_uri; canonical Drive index remains at 12 entries, not claimed as updated. No duplicate index created."
+    },
+    {
+      "id": "VG-20261022-0176",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+    },
+    {
+      "id": "VG-20261022-0177",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_scale_shapes.py",
+      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+    },
+    {
+      "id": "VG-20261022-0178",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_pentatonic_boxes.py",
+      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+    },
+    {
+      "id": "VG-20261022-0179",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_pentatonic_boxes_smoke.py",
+      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+    },
+    {
+      "id": "VG-20261022-0180",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_scale_mode.py",
+      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+    },
+    {
+      "id": "VG-20261022-0181",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+    },
+    {
+      "id": "VG-20261022-0182",
+      "date": "2026-10-22",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "12 unit tests; 7 GUI smoke scripts; A minor Box 1 G-string fret9 excluded, 3 tonic notes; all keys and boxes validated; hardware WASAPI unchanged"
+    },
+    {
+      "id": "VG-20261022-0183",
+      "date": "2026-10-22",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic v0.5.1 on main with code, tests and docs/dev/events.json; no README/docs edits or GitHub Actions"
     }
   ]
 }

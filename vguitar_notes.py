@@ -22,6 +22,7 @@ from typing import Optional
 from vguitar_audio import AudioPlayer
 from vguitar_caged import (CAGED_ORDER, INTERVAL_DESCRIPTIONS,
                            caged_positions, caged_shift, next_caged_form)
+from vguitar_scale_shapes import BOX_SCALES, BOX_NAMES, pentatonic_box, next_box
 from vguitar_storage import (
     ensure_dirs, preferences_path, read_preferences, save_preferences,
     save_run, list_runs, run_statistics, export_runs_for_llm,
@@ -380,6 +381,16 @@ class NoteTrainer:
         self.scale_position_mode = (lesson.get("scale_position_mode")
                                     if lesson.get("scale_position_mode") in ("auto", "manual") else "auto")
         self.scale_position = self._bounded(lesson.get("scale_position",0),0,20,0)
+        # Legacy users retain their key and range. Pentatonics now default to
+        # genuine boxes rather than the old arbitrary five-fret rectangle.
+        preferred_view = "box" if self.scale_name in BOX_SCALES else "range"
+        self.scale_view = lesson.get("scale_view", preferred_view)
+        if self.scale_view not in ("box", "full", "range"):
+            self.scale_view = preferred_view
+        if self.scale_view == "box" and self.scale_name not in BOX_SCALES:
+            self.scale_view = "range"
+        self.scale_box_mode = lesson.get("scale_box_mode") if lesson.get("scale_box_mode") in ("auto", "manual") else "auto"
+        self.scale_box = self._bounded(lesson.get("scale_box", 1), 1, 5, 1)
         if self.scale_position_mode == "auto":
             self.scale_position = auto_scale_position(self.tuning, self.scale_name, self.scale_key)
         self.scale_steps: list[tuple[int,int,int,str]] = []
@@ -455,6 +466,9 @@ class NoteTrainer:
                     "scale_key": self.scale_key,
                     "scale_position": self.scale_position,
                     "scale_position_mode": self.scale_position_mode,
+                    "scale_view": self.scale_view,
+                    "scale_box": self.scale_box,
+                    "scale_box_mode": self.scale_box_mode,
                     "caged_key": self.caged_key,
                     "caged_form_mode": self.caged_form_mode,
                     "caged_form": self.caged_form,
@@ -536,7 +550,7 @@ class NoteTrainer:
             Tooltip(btn, {"name": "Назвать ноту на указанном ладу.",
                           "find": "Найти названную ноту на указанной струне.",
                           "ear": "На слух определить высоту и показать её на грифе; 3 повтора.",
-                          "scale": "Найти все ноты гаммы на каждой струне в выбранной позиции.",
+                          "scale": "Аппликатуры Box 1–5 или карта всех нот выбранной гаммы.",
                            "caged": "Пять подвижных форм мажорного аккорда: корень, терция, квинта."}[mode])
         self.history_button = self._button(toolbar, "История", self.open_history, compact=True)
         Tooltip(self.history_button, "Результаты прошлых тестов и экспорт выбранных запусков.")
@@ -592,21 +606,26 @@ class NoteTrainer:
         self.scale_options = tk.Frame(quiz_card, bg=PANEL)
         self.scale_choice = tk.StringVar(value=self.scale_name)
         self.scale_key_choice = tk.StringVar(value=NOTE_EN[self.scale_key])
-        self.scale_position_choice = tk.StringVar(value=("Авто" if self.scale_position_mode == "auto"
-                                                        else str(self.scale_position)))
+        self.scale_view_choice = tk.StringVar(value={"box":"Аппликатуры", "range":"Участок ладов",
+                                                    "full":"Весь звукоряд"}[self.scale_view])
+        self.scale_position_choice = tk.StringVar()
         self._scale_groups = []
-        for col, (heading,variable,choices,w) in enumerate((
-                ("Гамма",self.scale_choice,list(SCALES),19),
-                ("Key",self.scale_key_choice,list(NOTE_EN),5),
-                ("Позиция",self.scale_position_choice,["Авто", *[str(n) for n in range(21)]],7))):
-            group = tk.Frame(self.scale_options,bg=PANEL)
-            group.grid(row=0,column=col,sticky="w",padx=(0,5))
+        self._scale_comboboxes = []
+        for heading, variable, choices, width in (
+            ("Гамма", self.scale_choice, list(SCALES), 19),
+            ("Вид", self.scale_view_choice, ["Аппликатуры", "Весь звукоряд", "Участок ладов"], 17),
+            ("Key", self.scale_key_choice, list(NOTE_EN), 6),
+            ("Позиция", self.scale_position_choice, [], 14),
+        ):
+            group = tk.Frame(self.scale_options, bg=PANEL)
             self._scale_groups.append(group)
-            self._label(group,heading,9,MUTED).pack(anchor="w")
-            combo = ttk.Combobox(group,textvariable=variable,values=choices,
-                                 state="readonly",width=w)
+            self._label(group, heading, 9, MUTED).pack(anchor="w")
+            combo = ttk.Combobox(group, textvariable=variable, values=choices,
+                                 state="readonly", width=width)
             combo.pack(anchor="w")
-            combo.bind("<<ComboboxSelected>>",self._scale_option_changed)
+            combo.bind("<<ComboboxSelected>>", self._scale_option_changed)
+            self._scale_comboboxes.append(combo)
+        self._refresh_scale_choices()
         self.caged_options = tk.Frame(quiz_card, bg=PANEL)
         self.caged_key_choice = tk.StringVar(value=NOTE_EN[self.caged_key])
         self.caged_form_choice = tk.StringVar(value="Авто" if self.caged_form_mode == "auto" else self.caged_form)
@@ -646,16 +665,12 @@ class NoteTrainer:
             self._layout_scale_options(event.width)
 
     def _layout_scale_options(self, width: int) -> None:
-        compact = width < 900
-        if getattr(self, '_scale_options_compact', None) == compact:
-            return
-        self._scale_options_compact = compact
+        # Two rows prevent four scale controls clipping in side-by-side layout.
         for group in self._scale_groups:
             group.grid_forget()
-        self._scale_groups[0].grid(row=0,column=0,sticky='w',padx=(0,4))
-        self._scale_groups[1].grid(row=0,column=1,sticky='w',padx=(0,2))
-        self._scale_groups[2].grid(row=1 if compact else 0,column=0 if compact else 2,sticky='w',
-                                   padx=(0,2),pady=(3,0) if compact else (0,0))
+        for idx, group in enumerate(self._scale_groups):
+            group.grid(row=idx // 2, column=idx % 2, sticky='w',
+                       padx=(0, 7), pady=(2, 0))
 
     def _layout_toolbar(self, width: int) -> None:
         # Fully single-row on wide windows; compact 2-3 rows on narrow ones.
@@ -996,18 +1011,66 @@ class NoteTrainer:
         self._save_preferences()
         self.show_map("Режим изменён")
 
+    def _refresh_scale_choices(self) -> None:
+        if self.scale_view == "box":
+            self._scale_comboboxes[3].config(values=["Авто", *BOX_NAMES], state="readonly")
+            self.scale_position_choice.set("Авто" if self.scale_box_mode == "auto"
+                                           else BOX_NAMES[self.scale_box - 1])
+        elif self.scale_view == "range":
+            self._scale_comboboxes[3].config(values=["Авто", *[str(n) for n in range(21)]], state="readonly")
+            self.scale_position_choice.set("Авто" if self.scale_position_mode == "auto"
+                                           else str(self.scale_position))
+        else:
+            self._scale_comboboxes[3].config(values=["0–24"], state="disabled")
+            self.scale_position_choice.set("0–24")
+
     def _scale_option_changed(self, event=None) -> None:
+        previous_scale = self.scale_name
         self.scale_name = self.scale_choice.get()
         self.scale_key = NOTE_EN.index(self.scale_key_choice.get())
-        selected = self.scale_position_choice.get()
-        self.scale_position_mode = "auto" if selected == "Авто" else "manual"
-        if self.scale_position_mode == "auto":
-            self.scale_position = auto_scale_position(self.tuning, self.scale_name, self.scale_key,
-                                                      previous=self.scale_position)
-        else:
-            self.scale_position = int(selected)
+        view = {"Аппликатуры":"box", "Весь звукоряд":"full",
+                "Участок ладов":"range"}.get(self.scale_view_choice.get(), "range")
+        # Switching from a non-pentatonic to a pentatonic defaults to real boxes.
+        if self.scale_name != previous_scale and (event is None or event.widget is self._scale_comboboxes[0]):
+            if self.scale_name in BOX_SCALES and self.scale_view == "range":
+                view = "box"
+            elif self.scale_name not in BOX_SCALES and view == "box":
+                view = "range"
+        if view == "box" and self.scale_name not in BOX_SCALES:
+            view = "range"
+            self._set_status("Box 1–5 сейчас доступны для мажорной и минорной пентатоники")
+        changed_view = self.scale_view != view
+        self.scale_view = view
+        self.scale_view_choice.set({"box":"Аппликатуры", "full":"Весь звукоряд",
+                                    "range":"Участок ладов"}[view])
+        if not changed_view:
+            selected = self.scale_position_choice.get()
+            if view == "box":
+                if selected in BOX_NAMES:
+                    self.scale_box_mode, self.scale_box = "manual", BOX_NAMES.index(selected) + 1
+                elif selected == "Авто":
+                    self.scale_box_mode = "auto"
+            elif view == "range":
+                if selected == "Авто":
+                    self.scale_position_mode = "auto"
+                    self.scale_position = auto_scale_position(self.tuning, self.scale_name,
+                                                              self.scale_key, previous=self.scale_position)
+                elif selected.isdigit():
+                    self.scale_position_mode, self.scale_position = "manual", int(selected)
+        self._refresh_scale_choices()
         self._save_preferences()
-        self.show_map("Гамма или позиция изменена")
+        self.show_map("Гамма или аппликатура изменена")
+
+    def _scale_items(self) -> list[tuple[int, int, int, str]]:
+        if self.scale_view == "box":
+            return pentatonic_box(self.tuning, self.scale_name, self.scale_key, self.scale_box)
+        if self.scale_view == "range":
+            return scale_positions(self.tuning, self.scale_name, self.scale_key, self.scale_position)
+        allowed, labels = scale_pattern(self.scale_name, self.scale_key)
+        degrees = {pc: label if label != "8" else "1" for pc,label in zip(allowed,labels)}
+        return [(r,f,self._pitch(r,f),degrees[self._pitch_class(r,f)])
+                for r in range(5,-1,-1) for f in range(25)
+                if self._pitch_class(r,f) in degrees]
 
     def _caged_option_changed(self, event=None) -> None:
         self.caged_key = NOTE_EN.index(self.caged_key_choice.get())
@@ -1022,6 +1085,14 @@ class NoteTrainer:
         return caged_positions(self.tuning, self.caged_key, self.caged_form)
 
     def _scale_area(self) -> tuple[int,int]:
+        if self.scale_view == "full":
+            return 0, 24
+        if self.scale_view == "box":
+            try:
+                frets = [f for _r, f, _m, _d in self._scale_items()]
+                return min(frets), max(frets)
+            except ValueError:
+                return 0, 12
         return self.scale_position, min(24,self.scale_position+SCALE_POSITION_SPAN-1)
 
     def _board_frets(self) -> int:
@@ -1038,9 +1109,13 @@ class NoteTrainer:
         self._cancel_study_timer()
         if self.mode == "caged" and self.caged_form_mode == "auto" and self.phase == "result":
             self.caged_form = next_caged_form(self.caged_form)
-        if self.mode == "scale" and self.scale_position_mode == "auto" and self.phase == "result":
-            self.scale_position = auto_scale_position(self.tuning, self.scale_name, self.scale_key,
-                                                      previous=self.scale_position)
+        if self.mode == "scale" and self.phase == "result":
+            if self.scale_view == "box" and self.scale_box_mode == "auto":
+                self.scale_box = next_box(self.scale_box)
+                self._refresh_scale_choices()
+            elif self.scale_view == "range" and self.scale_position_mode == "auto":
+                self.scale_position = auto_scale_position(self.tuning, self.scale_name,
+                                                          self.scale_key, previous=self.scale_position)
         self.phase = "ready"
         self.checked = False
         self.guess_fret = None
@@ -1056,7 +1131,7 @@ class NoteTrainer:
                 return
         if self.mode == "scale":
             try:
-                scale_positions(self.tuning,self.scale_name,self.scale_key,self.scale_position)
+                self._scale_items()
             except ValueError:
                 messagebox.showwarning("Позиция недоступна",
                     "Гамма не помещается в выбранную позицию. Измени положение или строй.",
@@ -1066,10 +1141,10 @@ class NoteTrainer:
         self.phase = "study"
         # Start WASAPI early and pre-render the exact working-area pitches while
         # the student studies the fretboard. All computation stays off Tk's thread.
-        self.audio.preload([self._pitch(row, fret)
-                            for row in range(6) if self._active(row)
-                            for fret in range(self._board_frets() + 1)
-                            if self.mode != "scale" or self._scale_active_fret(fret)])
+        self.audio.preload(([midi for _, _, midi, _ in self._scale_items()]
+                            if self.mode == "scale" else
+                            [self._pitch(row, fret) for row in range(6) if self._active(row)
+                             for fret in range(self._board_frets() + 1)]))
         self.study_deadline = time.monotonic() + self.study_seconds
         self.study_left = self.study_seconds
         self._update_all()
@@ -1108,7 +1183,7 @@ class NoteTrainer:
             self.caged_steps = self._caged_shape()
             return [Question(row, fret) for row, fret, _, _ in self.caged_steps]
         if self.mode == "scale":
-            self.scale_steps = scale_positions(self.tuning,self.scale_name,self.scale_key,self.scale_position)
+            self.scale_steps = self._scale_items()
             return [Question(row,fret) for row,fret,_,_ in self.scale_steps]
         pool = [Question(row, fret)
                 for row in range(6 - self.active_strings, 6)
@@ -1325,7 +1400,7 @@ class NoteTrainer:
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.5.0",
+            "app_version": "0.5.1",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -1339,14 +1414,21 @@ class NoteTrainer:
                 "mode": self.mode,
                 "scale": self.scale_name if self.mode == "scale" else None,
                 "key": NOTE_EN[self.scale_key] if self.mode == "scale" else None,
-                "position_start_fret": self.scale_position if self.mode == "scale" else None,
-                "position_mode": self.scale_position_mode if self.mode == "scale" else None,
+                "position_start_fret": self._scale_area()[0] if self.mode == "scale" else None,
+                "position_end_fret": self._scale_area()[1] if self.mode == "scale" else None,
+                "position_mode": (self.scale_box_mode if self.scale_view == "box" else
+                                  self.scale_position_mode if self.scale_view == "range" else "full")
+                                 if self.mode == "scale" else None,
                 "scale_shape_notes": len(self.scale_steps) if self.mode == "scale" else None,
                 "caged_key": NOTE_EN[self.caged_key] if self.mode == "caged" else None,
                 "caged_form": self.caged_form if self.mode == "caged" else None,
                 "caged_form_mode": self.caged_form_mode if self.mode == "caged" else None,
                 "caged_shape_notes": len(self.caged_steps) if self.mode == "caged" else None,
-                "position_width_frets": SCALE_POSITION_SPAN if self.mode == "scale" else None,
+                "scale_view": self.scale_view if self.mode == "scale" else None,
+                "scale_box": self.scale_box if self.mode == "scale" and self.scale_view == "box" else None,
+                "scale_box_mode": self.scale_box_mode if self.mode == "scale" and self.scale_view == "box" else None,
+                "position_width_frets": (self._scale_area()[1] - self._scale_area()[0] + 1
+                                         if self.mode == "scale" else None),
                 "fretboard_theme": self.fretboard_theme,
                 "ear_max_replays": EAR_REPLAYS if self.mode == "ear" else None,
             },
@@ -1508,7 +1590,10 @@ class NoteTrainer:
         width = board_width(limit,self.cell_width)
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
         self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ")
-        self.board_hint.config(text=(f"6/6 · позиция {self.scale_position}–{limit}" if self.mode == "scale"
+        self.board_hint.config(text=(
+            (f"6/6 · {self.scale_name} · {BOX_NAMES[self.scale_box-1]}" if self.scale_view == "box"
+             else f"6/6 · {self.scale_name} · весь гриф" if self.scale_view == "full"
+             else f"6/6 · участок {self.scale_position}–{limit}") if self.mode == "scale"
                                      else f"{NOTE_EN[self.caged_key]} мажор · {self.caged_form}-форма" if self.mode == "caged"
                                      else f"{self.active_strings}/6 струн · 0–{self.active_frets}"))
         for fret in range(limit + 1):
@@ -1536,11 +1621,18 @@ class NoteTrainer:
                 self.board.create_rectangle(0, y0, width, y0 + ROW_H,
                                             fill=blend_hex(wood["neck"], wood["inactive"], .40), outline='',
                                             tags=('inactive_overlay',))
-        if self.mode == "scale":
-            first = fret_start(self.scale_position,self.cell_width)
+        if self.mode == "scale" and self.scale_view != "full":
+            left, _right = self._scale_area()
+            first = fret_start(left,self.cell_width)
             if first > 0:
                 self.board.create_rectangle(0,TOP,first,neck_bottom,
                     fill=blend_hex(wood["neck"],BG,.25),outline='',tags=('outside_position',))
+        scale_coords = {}
+        if self.mode == "scale":
+            try:
+                scale_coords = {(r,f): degree for r,f,_m,degree in self._scale_items()}
+            except ValueError:
+                pass
         caged_notes = {}
         if self.mode == "caged":
             try:
@@ -1606,15 +1698,17 @@ class NoteTrainer:
                 if show_note:
                     highlight = self.phase == "quiz" and self.checked
                     in_shape = ((row, fret) in caged_notes if self.mode == "caged" else
-                                self.mode != "scale" or
-                                (self._scale_active_fret(fret) and
-                                 pc in scale_pattern(self.scale_name, self.scale_key)[0]))
+                                self.mode != "scale" or (row, fret) in scale_coords)
                     degree = caged_notes.get((row, fret)) if self.mode == "caged" else None
-                    special = {"1": ACCENT, "3": AMBER, "5": GREEN}.get(degree)
+                    scale_root = (self.mode == "scale" and in_shape and
+                                  scale_coords.get((row, fret)) == "1")
+                    special = AMBER if scale_root else {"1": ACCENT, "3": AMBER, "5": GREEN}.get(degree)
                     fill_color = ("#236e70" if highlight else "#2b607f") if in_shape else "#283443"
                     self.board.create_oval(*disc, fill=fill_color,
                                            outline=(GREEN if highlight else special or "#4b9abd") if in_shape else "#475363",
-                                           width=2 if degree else 1, tags=("note_disc",))
+                                           width=2 if degree or scale_root else 1,
+                                           tags=("note_disc", "scale_note" if self.mode == "scale" and in_shape
+                                                 else "scale_outside" if self.mode == "scale" else "other_note"))
                     self.board.create_text(center_x, ymid - 5, text=self._note_name(pc),
                                            fill=special or (TEXT if in_shape else FAINT), font=(FONT, 10, "bold"))
                     self.board.create_text(center_x, ymid + 7,
@@ -1642,7 +1736,8 @@ class NoteTrainer:
                 self.board.xview_moveto(max(0, x0 - 2 * self.cell_width) / max(width, 1))
             # In find/ear don't reveal the target fret by auto-scrolling.
         if self.mode == "scale":
-            self.board.xview_moveto(max(0,fret_start(self.scale_position,self.cell_width)-10)/max(width,1))
+            left, _right = self._scale_area()
+            self.board.xview_moveto(max(0,fret_start(left,self.cell_width)-10)/max(width,1))
         if self.mode == "caged":
             try:
                 start = caged_shift(self.tuning, self.caged_key, self.caged_form)
@@ -1780,7 +1875,10 @@ class NoteTrainer:
         if self.phase in ("ready", "study"):
             self.quiz_heading.config(text="Подготовка" if self.phase == "ready" else f"Повторение · {self.study_left} с")
             if self.phase == "ready":
-                self._label(self.quiz_body,"Карта открыта. Изучи ноты перед тестом.",10,MUTED).pack(anchor="w")
+                caption = (f"{BOX_NAMES[self.scale_box-1]}: корни — янтарные, ноты бокса — голубые." if
+                           self.mode == "scale" and self.scale_view == "box" else
+                           "Карта открыта. Изучи ноты перед тестом.")
+                self._label(self.quiz_body,caption,10,MUTED).pack(anchor="w")
                 button = self._button(self.action_row,"Повторение ▶",self.start_study,primary=True,compact=True)
                 button.pack(side="left")
                 Tooltip(button,"Начать повторение с таймером; ноты уже видны в подготовке.")
@@ -1817,12 +1915,16 @@ class NoteTrainer:
                             bg="#19364d").pack(anchor="w")
             elif self.mode == "scale":
                 degree = self.scale_steps[self.index][3]
-                heading = f"{self.scale_name} · {NOTE_EN[self.scale_key]} · {self.index+1}/{len(self.scale_steps)}"
+                shape_name = (BOX_NAMES[self.scale_box-1] if self.scale_view == "box" else
+                              "Весь гриф" if self.scale_view == "full" else
+                              f"Лады {self.scale_position}–{self.scale_position+4}")
+                heading = f"{self.scale_name} · {NOTE_EN[self.scale_key]} · {shape_name} · {self.index+1}/{len(self.scale_steps)}"
                 self._label(self.quiz_body,heading,11,MUTED,True).pack(anchor="w",pady=(2,7))
                 box = tk.Frame(self.quiz_body,bg="#19364d",padx=15,pady=12,highlightbackground=ACCENT,highlightthickness=1)
                 box.pack(anchor="w")
                 self._label(box,f"{self._note_name(target)}  ·  {degree}",22,ACCENT,True,bg="#19364d").pack(anchor="w")
-                self._label(box,f"Струна {STRINGS[q.row][0]} · лады {self.scale_position}–{self.scale_position+4}",
+                left, right = self._scale_area()
+                self._label(box,f"Струна {STRINGS[q.row][0]} · лады {left}–{right}",
                             11,TEXT,bg="#19364d").pack(anchor="w",pady=(4,0))
                 if self.checked:
                     self._label(box,f"{midi_label(self._pitch(q.row,q.fret))}",12,GREEN,True,bg="#19364d").pack(anchor="w",pady=(5,0))

@@ -1,4 +1,4 @@
-"""Full scale-box coverage, auto-position defaults, and true fret geometry."""
+"""Arbitrary five-fret range coverage (not a CAGED box), auto positions, and geometry."""
 import random
 import unittest
 from vguitar_notes import (SCALES, STANDARD_MIDI, TUNINGS, NOTE_EN,
@@ -26,7 +26,7 @@ class PhysicalGeometry(unittest.TestCase):
 
 
 class ScaleMath(unittest.TestCase):
-    def test_complete_box_every_string_all_keys_all_positions(self):
+    def test_complete_range_every_string_all_keys_all_positions(self):
         for name in SCALES:
             for key in range(12):
                 expected=set(n%12 for n in SCALES[name][0])
@@ -46,7 +46,7 @@ class ScaleMath(unittest.TestCase):
                         self.assertEqual(STANDARD_MIDI[row]+fret,midi)
                         self.assertIn(degree,SCALES[name][1])
 
-    def test_pentatonic_requires_every_position_not_only_five_degrees(self):
+    def test_pentatonic_range_requires_every_tone_in_the_window(self):
         notes=scale_positions(STANDARD_MIDI,'Минорная пентатоника',4,0)
         self.assertGreater(len(notes),6)
         self.assertEqual(len({(r,f) for r,f,_,_ in notes}),len(notes))
