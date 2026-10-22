@@ -11,6 +11,8 @@
     "frozen_without_command": true,
     "protected_paths": [
       "README.md",
+      "README.en.md",
+      "assets/vguitar-icon.svg",
       "CONTRIBUTING.md",
       "CODE_OF_CONDUCT.md",
       "SECURITY.md",
@@ -23,7 +25,8 @@
   "event_journal": {
     "path": "docs/dev/events.json",
     "record_every_action": true,
-    "format": "json-array"
+    "format": "json-object-with-events-array",
+    "events_key": "events"
   },
   "assets": {
     "drive_folder_id": "1hQ2WZ39yWISqsk-qJLkn9HwEd0wbFcKZ",

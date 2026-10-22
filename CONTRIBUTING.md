@@ -18,13 +18,15 @@ vGUITAR is a small, offline-first guitar-learning project. Prefer focused change
 
 Describe the problem, user-facing behavior, tests run, and screenshots **only when UI changes justify them**. Keep generated ZIP files, screenshots, local environments, and caches out of the repository.
 
-Documentation is **frozen by default**: do not change README, CONTRIBUTING, SECURITY, code of conduct, or explanatory docs unless the project owner explicitly issues `#syncdocs`. The operational JSON event log under `docs/dev/` is exempt from this freeze and must be updated with **every repository/asset action**.
+Documentation is **frozen by default**: do not change either README (`README.md`, `README.en.md`), the documented app icon, CONTRIBUTING, SECURITY, code of conduct, or explanatory docs unless the project owner explicitly issues `#syncdocs`. The operational JSON event log under `docs/dev/` is exempt from this freeze and must be updated with **every repository/asset action**.
 
 ## Asset storage and traceability
 
 Source code belongs in GitHub. Non-repository release bundles and screenshots belong in the dedicated project Google Drive folder. Before uploading, check its `file_index.json` for the same logical asset or SHA-256. Update the index **in place**, preserving file IDs when replacing an existing asset; do not create duplicate copies by default.
 
 Every GitHub change must be represented in `docs/dev/events.json` as a machine-readable action event. Document synchronization requires an explicit `#syncdocs`.
+
+Historical versions and source commits are documented in [docs/releases/HISTORY.md](docs/releases/HISTORY.md). Windows contributors can use `scripts/release_history.ps1` (or `scripts/RELEASE.bat`) to restore annotated tags locally; `-PushAll -PublishRelease` additionally publishes the tags and the current GitHub Release through an authenticated `gh` CLI. Existing divergent tags must never be force-updated.
 
 ## Conduct and security
 

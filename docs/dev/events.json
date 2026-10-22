@@ -1702,6 +1702,117 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Atomic commit with application, pure helper, tests, version, dev ledger. No GitHub Actions, README/docs untouched."
+    },
+    {
+      "id": "VG-20261023-0210",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "README.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0211",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "README.en.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0212",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "docs/USER_GUIDE.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0213",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "docs/CHANGELOG.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0214",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "docs/releases/v0.5.4.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0215",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "docs/releases/HISTORY.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0216",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "docs/README.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0217",
+      "date": "2026-10-23",
+      "action": "github.add_release_tool",
+      "status": "success",
+      "path": "scripts/release_history.ps1",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0218",
+      "date": "2026-10-23",
+      "action": "github.add_release_tool",
+      "status": "success",
+      "path": "scripts/RELEASE.bat",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0219",
+      "date": "2026-10-23",
+      "action": "github.add_icon",
+      "status": "success",
+      "path": "assets/vguitar-icon.svg",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0220",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "project_policy.json",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0221",
+      "date": "2026-10-23",
+      "action": "docs.sync",
+      "status": "success",
+      "path": "CONTRIBUTING.md",
+      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+    },
+    {
+      "id": "VG-20261023-0222",
+      "date": "2026-10-23",
+      "action": "release.prepare",
+      "status": "success",
+      "path": "docs/releases/v0.5.4.md",
+      "detail": "Release notes and safe local publication script prepared; no remote tags or GitHub Release published by this connector."
+    },
+    {
+      "id": "VG-20261023-0223",
+      "date": "2026-10-23",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic docs(sync) publication on main; runtime and VERSION.json unchanged; tags/releases require user's local gh."
     }
   ]
 }
