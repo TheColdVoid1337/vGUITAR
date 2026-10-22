@@ -20,6 +20,8 @@ from dataclasses import dataclass
 from typing import Optional
 
 from vguitar_audio import AudioPlayer
+from vguitar_caged import (CAGED_ORDER, INTERVAL_DESCRIPTIONS,
+                           caged_positions, caged_shift, next_caged_form)
 from vguitar_storage import (
     ensure_dirs, preferences_path, read_preferences, save_preferences,
     save_run, list_runs, run_statistics, export_runs_for_llm,
@@ -368,7 +370,7 @@ class NoteTrainer:
         self.active_frets = self._bounded(lesson.get("active_frets", 7), 1, 24, 7)
         self.question_count = self._bounded(lesson.get("question_count", 10), 5, 100, 10)
         self.study_seconds = self._bounded(lesson.get("study_seconds", 60), 10, 300, 60)
-        self.mode = lesson.get("mode") if lesson.get("mode") in ("name", "find", "ear") else "name"
+        self.mode = lesson.get("mode") if lesson.get("mode") in ("name", "find", "ear", "scale", "caged") else "name"
         self.fretboard_theme = preferences.get("fretboard_theme", "default")
         if self.fretboard_theme not in FRETBOARD_THEMES:
             self.fretboard_theme = "default"
@@ -381,6 +383,11 @@ class NoteTrainer:
         if self.scale_position_mode == "auto":
             self.scale_position = auto_scale_position(self.tuning, self.scale_name, self.scale_key)
         self.scale_steps: list[tuple[int,int,int,str]] = []
+        self.caged_key = self._bounded(lesson.get("caged_key", 7), 0, 11, 7)
+        self.caged_form_mode = (lesson.get("caged_form_mode")
+                                if lesson.get("caged_form_mode") in ("auto", "manual") else "auto")
+        self.caged_form = lesson.get("caged_form") if lesson.get("caged_form") in CAGED_ORDER else "E"
+        self.caged_steps: list[tuple[int,int,int,str]] = []
         self.phase = "ready"              # ready / study / quiz / result
         self.study_deadline: Optional[float] = None
         self.study_after_id: Optional[str] = None
@@ -448,6 +455,9 @@ class NoteTrainer:
                     "scale_key": self.scale_key,
                     "scale_position": self.scale_position,
                     "scale_position_mode": self.scale_position_mode,
+                    "caged_key": self.caged_key,
+                    "caged_form_mode": self.caged_form_mode,
+                    "caged_form": self.caged_form,
                 },
             })
         except OSError as exc:
@@ -519,14 +529,15 @@ class NoteTrainer:
         self.study_value = self._counter(self.counter_strip, "Повтор", "study", 10, 300, step=10)
         self.mode_strip = tk.Frame(toolbar, bg=PANEL)
         self.mode_buttons: dict[str, tk.Button] = {}
-        for mode, title in (("name", "Назвать"), ("find", "Найти"), ("ear", "На слух"), ("scale", "Гаммы")):
+        for mode, title in (("name", "Назвать"), ("find", "Найти"), ("ear", "На слух"), ("scale", "Гаммы"), ("caged", "CAGED")):
             btn = self._button(self.mode_strip, title, lambda m=mode: self.change_mode(m), compact=True)
             btn.pack(side="left", padx=(0, 3))
             self.mode_buttons[mode] = btn
             Tooltip(btn, {"name": "Назвать ноту на указанном ладу.",
                           "find": "Найти названную ноту на указанной струне.",
                           "ear": "На слух определить высоту и показать её на грифе; 3 повтора.",
-                          "scale": "Найти все ноты гаммы на каждой струне в выбранной позиции."}[mode])
+                          "scale": "Найти все ноты гаммы на каждой струне в выбранной позиции.",
+                           "caged": "Пять подвижных форм мажорного аккорда: корень, терция, квинта."}[mode])
         self.history_button = self._button(toolbar, "История", self.open_history, compact=True)
         Tooltip(self.history_button, "Результаты прошлых тестов и экспорт выбранных запусков.")
         self._toolbar_layout = None
@@ -596,6 +607,23 @@ class NoteTrainer:
                                  state="readonly",width=w)
             combo.pack(anchor="w")
             combo.bind("<<ComboboxSelected>>",self._scale_option_changed)
+        self.caged_options = tk.Frame(quiz_card, bg=PANEL)
+        self.caged_key_choice = tk.StringVar(value=NOTE_EN[self.caged_key])
+        self.caged_form_choice = tk.StringVar(value="Авто" if self.caged_form_mode == "auto" else self.caged_form)
+        self._caged_groups = []
+        for col, (heading, variable, values, width) in enumerate((
+                ("Аккорд", self.caged_key_choice, list(NOTE_EN), 6),
+                ("Форма", self.caged_form_choice, ["Авто", *CAGED_ORDER], 9))):
+            group = tk.Frame(self.caged_options, bg=PANEL)
+            group.grid(row=0, column=col, sticky="w", padx=(0, 8))
+            self._caged_groups.append(group)
+            self._label(group, heading, 9, MUTED).pack(anchor="w")
+            combo = ttk.Combobox(group, textvariable=variable, values=values,
+                                 state="readonly", width=width)
+            combo.pack(anchor="w")
+            combo.bind("<<ComboboxSelected>>", self._caged_option_changed)
+        self._label(self.caged_options, "Мажор · 1 / 3 / 5", 10, MUTED).grid(
+            row=0, column=2, sticky="s", padx=(6, 0), pady=(0, 2))
         self.quiz_body = tk.Frame(quiz_card, bg=PANEL)
         self.quiz_body.pack(fill="both", expand=True, pady=(3, 0))
         self.action_row = tk.Frame(quiz_card, bg=PANEL)
@@ -942,7 +970,7 @@ class NoteTrainer:
                           fg="#072139" if active else TEXT)
 
     def _active(self, row: int) -> bool:
-        return self.mode == "scale" or row >= 6 - self.active_strings
+        return self.mode in ("scale", "caged") or row >= 6 - self.active_strings
 
     def _scale_active_fret(self, fret: int) -> bool:
         left,right = self._scale_area()
@@ -961,7 +989,7 @@ class NoteTrainer:
         self.show_map("Параметры изменены")
 
     def change_mode(self, mode: str) -> None:
-        if mode not in ("name","find","ear","scale"):
+        if mode not in ("name","find","ear","scale","caged"):
             raise ValueError("Unknown mode")
         self.mode = mode
         self.board.xview_moveto(0)
@@ -981,16 +1009,35 @@ class NoteTrainer:
         self._save_preferences()
         self.show_map("Гамма или позиция изменена")
 
+    def _caged_option_changed(self, event=None) -> None:
+        self.caged_key = NOTE_EN.index(self.caged_key_choice.get())
+        value = self.caged_form_choice.get()
+        self.caged_form_mode = "auto" if value == "Авто" else "manual"
+        if self.caged_form_mode == "manual":
+            self.caged_form = value
+        self._save_preferences()
+        self.show_map("Аккорд или форма изменены")
+
+    def _caged_shape(self) -> list[tuple[int, int, int, str]]:
+        return caged_positions(self.tuning, self.caged_key, self.caged_form)
+
     def _scale_area(self) -> tuple[int,int]:
         return self.scale_position, min(24,self.scale_position+SCALE_POSITION_SPAN-1)
 
     def _board_frets(self) -> int:
+        if self.mode == "caged":
+            try:
+                return max(12, min(24, max(f for _, f, _, _ in self._caged_shape()) + 1))
+            except ValueError:
+                return max(12, self.active_frets)
         return self._scale_area()[1] if self.mode == "scale" else self.active_frets
 
     def show_map(self, message: Optional[str] = None) -> None:
         """Preparation shows the working note map; timed study stays optional."""
         self._cancel_ear_sound()
         self._cancel_study_timer()
+        if self.mode == "caged" and self.caged_form_mode == "auto" and self.phase == "result":
+            self.caged_form = next_caged_form(self.caged_form)
         if self.mode == "scale" and self.scale_position_mode == "auto" and self.phase == "result":
             self.scale_position = auto_scale_position(self.tuning, self.scale_name, self.scale_key,
                                                       previous=self.scale_position)
@@ -1001,6 +1048,12 @@ class NoteTrainer:
         self._update_all()
 
     def start_study(self) -> None:
+        if self.mode == "caged":
+            try:
+                self._caged_shape()
+            except ValueError as exc:
+                messagebox.showwarning("CAGED недоступен", str(exc), parent=self.root)
+                return
         if self.mode == "scale":
             try:
                 scale_positions(self.tuning,self.scale_name,self.scale_key,self.scale_position)
@@ -1051,6 +1104,9 @@ class NoteTrainer:
         return self._pitch(row, fret) % 12
 
     def _make_questions(self) -> list[Question]:
+        if self.mode == "caged":
+            self.caged_steps = self._caged_shape()
+            return [Question(row, fret) for row, fret, _, _ in self.caged_steps]
         if self.mode == "scale":
             self.scale_steps = scale_positions(self.tuning,self.scale_name,self.scale_key,self.scale_position)
             return [Question(row,fret) for row,fret,_,_ in self.scale_steps]
@@ -1118,9 +1174,11 @@ class NoteTrainer:
         try:
             self.questions = self._make_questions()
         except ValueError:
-            self.show_map("Гамма не помещается в эту позицию")
+            self.show_map("Упражнение недоступно")
             messagebox.showwarning("Позиция недоступна",
-                "Гамма не помещается в пяти соседних ладах. Выбери другую позицию.",parent=self.root)
+                ("Для CAGED нужен стандартный интервальный строй (Standard, E♭ или D Standard)."
+                 if self.mode == "caged" else "Гамма не помещается в пяти соседних ладах. Выбери другую позицию."),
+                parent=self.root)
             return
         self.audio.preload([self._pitch(q.row, q.fret) for q in self.questions])
         self.index = 0
@@ -1148,7 +1206,7 @@ class NoteTrainer:
         self.question_started = None
         self.checked = True
         self.feedback_is_correct = correct
-        answer_pc = actual_pc if self.mode in ("find", "ear", "scale") else getattr(self, "_chosen_pc", None)
+        answer_pc = actual_pc if self.mode in ("find", "ear", "scale", "caged") else getattr(self, "_chosen_pc", None)
         self.responses.append({
             "index": self.index + 1,
             "mode": self.mode,
@@ -1157,9 +1215,11 @@ class NoteTrainer:
             "expected_note": self._note_name(target_pc),
             "expected_midi": self._pitch(q.row, q.fret),
             "answer_note": self._note_name(answer_pc) if answer_pc is not None else None,
-            "answer_fret": self.guess_fret if self.mode in ("find", "ear", "scale") else None,
-            "degree": self.scale_steps[self.index][3] if self.mode == "scale" else None,
+            "answer_fret": self.guess_fret if self.mode in ("find", "ear", "scale", "caged") else None,
+            "degree": (self.caged_steps[self.index][3] if self.mode == "caged" else
+                       self.scale_steps[self.index][3] if self.mode == "scale" else None),
             "scale_step": self.index+1 if self.mode == "scale" else None,
+            "caged_step": self.index+1 if self.mode == "caged" else None,
             "answer_string_number": (int(STRINGS[self.guess_row][0]) if self.guess_row is not None else None),
             "answer_midi": (self._pitch(self.guess_row, self.guess_fret)
                             if self.guess_row is not None and self.guess_fret is not None else None),
@@ -1178,6 +1238,11 @@ class NoteTrainer:
             if self.mode == "name":
                 self.feedback = f"{self._readable_note(target_pc)} · {duration:.2f} с"
                 self.mistakes.append(f"{n}-я струна, лад {q.fret}: {self._readable_note(target_pc)}")
+            elif self.mode == "caged":
+                degree = self.caged_steps[self.index][3]
+                self.feedback = (f"{INTERVAL_DESCRIPTIONS[degree]} · {midi_label(self._pitch(q.row, q.fret))} · "
+                                 f"струна {STRINGS[q.row][0]}, лад {q.fret} · {duration:.2f} с")
+                self.mistakes.append(f"CAGED {NOTE_EN[self.caged_key]} {self.caged_form}-форма · {self.feedback}")
             elif self.mode == "scale":
                 correct_midi = self._pitch(q.row,q.fret)
                 self.feedback = (f"{midi_label(correct_midi)} · струна {STRINGS[q.row][0]}, "
@@ -1222,7 +1287,7 @@ class NoteTrainer:
                                       and time.monotonic() < self.study_deadline):
             self.audio.play(self._pitch(row, fret))
             return
-        if self.phase != "quiz" or self.checked or self.mode not in ("find", "ear", "scale"):
+        if self.phase != "quiz" or self.checked or self.mode not in ("find", "ear", "scale", "caged"):
             return
         q = self._current()
         if self.mode == "find" and row != q.row:
@@ -1230,7 +1295,7 @@ class NoteTrainer:
         self.guess_fret = fret
         self.guess_row = row
         pc = self._pitch_class(row, fret)
-        correct = ((row, fret) == (q.row, q.fret) if self.mode == "scale" else
+        correct = ((row, fret) == (q.row, q.fret) if self.mode in ("scale", "caged") else
                    self._pitch(row, fret) == self._pitch(q.row, q.fret) if self.mode == "ear" else
                    pc == self._pitch_class(q.row, q.fret))
         self._feedback(correct, actual_pc=pc)
@@ -1260,7 +1325,7 @@ class NoteTrainer:
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.4.9",
+            "app_version": "0.5.0",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -1277,6 +1342,10 @@ class NoteTrainer:
                 "position_start_fret": self.scale_position if self.mode == "scale" else None,
                 "position_mode": self.scale_position_mode if self.mode == "scale" else None,
                 "scale_shape_notes": len(self.scale_steps) if self.mode == "scale" else None,
+                "caged_key": NOTE_EN[self.caged_key] if self.mode == "caged" else None,
+                "caged_form": self.caged_form if self.mode == "caged" else None,
+                "caged_form_mode": self.caged_form_mode if self.mode == "caged" else None,
+                "caged_shape_notes": len(self.caged_steps) if self.mode == "caged" else None,
                 "position_width_frets": SCALE_POSITION_SPAN if self.mode == "scale" else None,
                 "fretboard_theme": self.fretboard_theme,
                 "ear_max_replays": EAR_REPLAYS if self.mode == "ear" else None,
@@ -1401,17 +1470,20 @@ class NoteTrainer:
         self.study_value.config(text=str(self.study_seconds))
         for kind in ("strings","frets","questions"):
             frame = self._counter_boxes[kind]
-            if self.mode == "scale":
+            if self.mode in ("scale", "caged"):
                 frame.pack_forget()
             elif not frame.winfo_manager():
                 frame.pack(side="left",before=self._counter_boxes["study"],padx=(0,7))
         self._update_answer_layout_buttons()
         self.answer_layout_frame.pack_forget()
         self.scale_options.pack_forget()
+        self.caged_options.pack_forget()
         if self.mode == "name":
             self.answer_layout_frame.pack(side="right")
         if self.mode == "scale":
             self.scale_options.pack(fill="x",before=self.quiz_body,pady=(4,2))
+        if self.mode == "caged":
+            self.caged_options.pack(fill="x",before=self.quiz_body,pady=(4,2))
         for mode, btn in self.mode_buttons.items():
             selected = (mode == self.mode)
             btn.config(bg=ACCENT if selected else BUTTON_BG,
@@ -1437,6 +1509,7 @@ class NoteTrainer:
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
         self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ")
         self.board_hint.config(text=(f"6/6 · позиция {self.scale_position}–{limit}" if self.mode == "scale"
+                                     else f"{NOTE_EN[self.caged_key]} мажор · {self.caged_form}-форма" if self.mode == "caged"
                                      else f"{self.active_strings}/6 струн · 0–{self.active_frets}"))
         for fret in range(limit + 1):
             self.board.create_text(fret_center(fret,self.cell_width),11,text=str(fret),
@@ -1468,6 +1541,17 @@ class NoteTrainer:
             if first > 0:
                 self.board.create_rectangle(0,TOP,first,neck_bottom,
                     fill=blend_hex(wood["neck"],BG,.25),outline='',tags=('outside_position',))
+        caged_notes = {}
+        if self.mode == "caged":
+            try:
+                caged_notes = {(r, f): degree for r, f, _, degree in self._caged_shape()}
+                start = caged_shift(self.tuning, self.caged_key, self.caged_form)
+                first = fret_start(start, self.cell_width)
+                if first > 0:
+                    self.board.create_rectangle(0, TOP, first, neck_bottom,
+                        fill=blend_hex(wood["neck"], BG, .20), outline='', tags=('outside_position',))
+            except ValueError:
+                pass
         # The nut separates fret 0 (open) from fret 1.  Each later fret wire
         # is thinner and does not quite reach the neck's upper/lower edge.
         self.board.create_rectangle(OPEN_WIDTH - 3, TOP + 2, OPEN_WIDTH + 2,
@@ -1515,29 +1599,33 @@ class NoteTrainer:
                         show_note = True
                     if self.mode == "find" and row == q.row and pc == self._pitch_class(q.row, q.fret):
                         show_note = True
-                    if (self.mode == "ear" and self._pitch(row, fret) == self._pitch(q.row, q.fret)) or (self.mode == "scale" and (row, fret) == (q.row, q.fret)):
+                    if (self.mode == "ear" and self._pitch(row, fret) == self._pitch(q.row, q.fret)) or (self.mode in ("scale", "caged") and (row, fret) == (q.row, q.fret)):
                         show_note = True
                 if self.mode == "scale" and self.phase == "quiz" and not self._scale_active_fret(fret):
                     show_note = False
                 if show_note:
                     highlight = self.phase == "quiz" and self.checked
-                    in_shape = (self.mode != "scale" or
+                    in_shape = ((row, fret) in caged_notes if self.mode == "caged" else
+                                self.mode != "scale" or
                                 (self._scale_active_fret(fret) and
                                  pc in scale_pattern(self.scale_name, self.scale_key)[0]))
-                    self.board.create_oval(*disc,
-                                           fill=("#236e70" if highlight else "#2b607f") if in_shape else "#283443",
-                                           outline=(GREEN if highlight else "#4b9abd") if in_shape else "#475363", width=1,
-                                           tags=("note_disc",))
+                    degree = caged_notes.get((row, fret)) if self.mode == "caged" else None
+                    special = {"1": ACCENT, "3": AMBER, "5": GREEN}.get(degree)
+                    fill_color = ("#236e70" if highlight else "#2b607f") if in_shape else "#283443"
+                    self.board.create_oval(*disc, fill=fill_color,
+                                           outline=(GREEN if highlight else special or "#4b9abd") if in_shape else "#475363",
+                                           width=2 if degree else 1, tags=("note_disc",))
                     self.board.create_text(center_x, ymid - 5, text=self._note_name(pc),
-                                           fill=TEXT if in_shape else FAINT, font=(FONT, 10, "bold"))
-                    self.board.create_text(center_x, ymid + 7, text=self._note_ru(pc),
-                                           fill="#c8e3ef" if in_shape else FAINT, font=(FONT, 7))
+                                           fill=special or (TEXT if in_shape else FAINT), font=(FONT, 10, "bold"))
+                    self.board.create_text(center_x, ymid + 7,
+                                           text=degree if degree else self._note_ru(pc),
+                                           fill=special or ("#c8e3ef" if in_shape else FAINT), font=(FONT, 7, "bold" if degree else "normal"))
                 elif is_target:
                     self.board.create_oval(*disc, fill="#245879", outline=ACCENT,
                                            width=2, tags=("note_disc",))
                     self.board.create_text(center_x, ymid, text="?",
                                            fill=TEXT, font=(FONT, 14, "bold"))
-                if active and self.phase == "quiz" and self.mode in ("find", "ear", "scale"):
+                if active and self.phase == "quiz" and self.mode in ("find", "ear", "scale", "caged"):
                     q = self._current()
                     if self.mode == "find" and row == q.row and not self.checked:
                         self.board.create_rectangle(x0 + 3, y0 + 3, x0 + span - 3,
@@ -1555,6 +1643,12 @@ class NoteTrainer:
             # In find/ear don't reveal the target fret by auto-scrolling.
         if self.mode == "scale":
             self.board.xview_moveto(max(0,fret_start(self.scale_position,self.cell_width)-10)/max(width,1))
+        if self.mode == "caged":
+            try:
+                start = caged_shift(self.tuning, self.caged_key, self.caged_form)
+                self.board.xview_moveto(max(0, fret_start(max(0, start-1), self.cell_width)-10)/max(width,1))
+            except ValueError:
+                pass
 
     def _clear(self, parent: tk.Widget) -> None:
         for child in parent.winfo_children():
@@ -1708,6 +1802,19 @@ class NoteTrainer:
                     self._render_row_answers(self.quiz_body,target)
             elif self.mode == "find":
                 self._render_find_target(target, string)
+            elif self.mode == "caged":
+                degree = self.caged_steps[self.index][3]
+                box = tk.Frame(self.quiz_body, bg="#19364d", padx=13, pady=9,
+                               highlightbackground={"1": ACCENT, "3": AMBER, "5": GREEN}[degree],
+                               highlightthickness=2)
+                box.pack(fill="x", pady=(3, 4))
+                self._label(box, f"{NOTE_EN[self.caged_key]} мажор · {self.caged_form}-форма", 11, MUTED, True,
+                            bg="#19364d").pack(anchor="w")
+                self._label(box, f"{INTERVAL_DESCRIPTIONS[degree]} · {self._note_name(target)}",
+                            22, {"1": ACCENT, "3": AMBER, "5": GREEN}[degree], True,
+                            bg="#19364d").pack(anchor="w", pady=(4, 1))
+                self._label(box, f"Найди на струне {STRINGS[q.row][0]}", 11, TEXT,
+                            bg="#19364d").pack(anchor="w")
             elif self.mode == "scale":
                 degree = self.scale_steps[self.index][3]
                 heading = f"{self.scale_name} · {NOTE_EN[self.scale_key]} · {self.index+1}/{len(self.scale_steps)}"

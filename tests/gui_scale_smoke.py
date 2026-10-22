@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory() as rootpath:
     assert app._active(0) and app._active(5)
     assert app.scale_options.winfo_manager()=='pack'
     assert not app._counter_boxes['strings'].winfo_manager()
-    assert len(app.mode_buttons)==4
+    assert len(app.mode_buttons)==5
     app.scale_choice.set('Натуральный минор')
     app.scale_key_choice.set('E')
     app.scale_position_choice.set('0')

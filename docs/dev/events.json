@@ -1349,6 +1349,76 @@
       "path": "file_index.json",
       "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
       "detail": "In-place canonical index update for v0.4.9; read-back verified 7,576 bytes and 12 indexed files, no duplicate"
+    },
+    {
+      "id": "VG-20261022-0165",
+      "date": "2026-10-22",
+      "action": "github.add_file",
+      "status": "success",
+      "path": "vguitar_caged.py",
+      "detail": "Five standard major CAGED forms C/A/G/E/D with major triad validation, uniform tuning support and Drop D guard"
+    },
+    {
+      "id": "VG-20261022-0166",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "CAGED mode integrated into study map, guitar fretboard, quiz, history, clipboard export and keyboard next; preserves other modes"
+    },
+    {
+      "id": "VG-20261022-0167",
+      "date": "2026-10-22",
+      "action": "github.add_file",
+      "status": "success",
+      "path": "tests/test_caged.py",
+      "detail": "Pure CAGED shape / roots / thirds / fifths / tuning regression tests"
+    },
+    {
+      "id": "VG-20261022-0168",
+      "date": "2026-10-22",
+      "action": "github.add_file",
+      "status": "success",
+      "path": "tests/gui_caged_smoke.py",
+      "detail": "GUI exercises on four window sizes, answers, exports, form cycling and unsupported tunings"
+    },
+    {
+      "id": "VG-20261022-0169",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/gui_scale_smoke.py",
+      "detail": "Changed mode-button count expectation from four to five"
+    },
+    {
+      "id": "VG-20261022-0170",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "tests/gui_ear_theme_smoke.py",
+      "detail": "Changed mode-button count expectation from four to five"
+    },
+    {
+      "id": "VG-20261022-0171",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "Version bump to 0.5.0"
+    },
+    {
+      "id": "VG-20261022-0172",
+      "date": "2026-10-22",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "21 existing unit tests + 6 CAGED unit tests passed; seven GUI smoke scripts passed on Xvfb; WASAPI hardware not checked"
+    },
+    {
+      "id": "VG-20261022-0173",
+      "date": "2026-10-22",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic CAGED v0.5.0 commit on main; no GitHub Actions; documentation unchanged except docs/dev/events.json"
     }
   ]
 }
