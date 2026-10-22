@@ -1330,6 +1330,25 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Atomic release v0.4.9 in main with code+tests+dev JSON ledger. No documentation edits or GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0163",
+      "date": "2026-10-22",
+      "action": "drive.upload",
+      "status": "success",
+      "path": "vGUITAR_NoteTrainer_v0.4.9.zip",
+      "drive_file_id": "12v_p4tSr18WgG57D6lPuOY5a1cAPPapQ",
+      "sha256": "06e8027f78a7f01a088328c939f54c7a1a4820cb0e24c6d0be229d1eca8b12cb",
+      "detail": "Uploaded verified runtime ZIP v0.4.9 (35,239 bytes) to configured Drive asset folder"
+    },
+    {
+      "id": "VG-20261022-0164",
+      "date": "2026-10-22",
+      "action": "drive.update_file",
+      "status": "success",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
+      "detail": "In-place canonical index update for v0.4.9; read-back verified 7,576 bytes and 12 indexed files, no duplicate"
     }
   ]
 }
