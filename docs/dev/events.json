@@ -1419,6 +1419,25 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Atomic CAGED v0.5.0 commit on main; no GitHub Actions; documentation unchanged except docs/dev/events.json"
+    },
+    {
+      "id": "VG-20261022-0174",
+      "date": "2026-10-22",
+      "action": "drive.upload",
+      "status": "success",
+      "path": "vGUITAR_NoteTrainer_v0.5.0.zip",
+      "drive_file_id": "1FLFQZqZQV4WpMMp0CIqi7fJvLqLdpR8_",
+      "sha256": "a9e5ab170d6082557077782fb0efa5b6bec338234483a4c07ab4eb2cb54fbebe",
+      "detail": "Uploaded standalone runtime ZIP v0.5.0 with CAGED module; verified by Drive folder listing"
+    },
+    {
+      "id": "VG-20261022-0175",
+      "date": "2026-10-22",
+      "action": "drive.update_file",
+      "status": "failed",
+      "path": "file_index.json",
+      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
+      "detail": "Prepared local updated index (13 assets) but connector rejected staged JSON file_uri; canonical Drive index remains at 12 entries, not claimed as updated. No duplicate index created."
     }
   ]
 }
