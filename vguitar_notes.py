@@ -27,6 +27,7 @@ from vguitar_forms import (caged_scale, power_chord, triad_voicing,
 from vguitar_scale_shapes import BOX_SCALES, BOX_NAMES, pentatonic_box, next_box
 from vguitar_scale_patterns import (FINGERING_SCALES, shape_names, shape_family,
                                    scale_fingering, next_shape)
+from vguitar_strings import normalize_selected_strings, rows_for_strings, strings_from_count
 from vguitar_storage import (
     ensure_dirs, preferences_path, read_preferences, save_preferences,
     save_run, list_runs, run_statistics, export_runs_for_llm,
@@ -372,6 +373,8 @@ class NoteTrainer:
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.active_strings = self._bounded(lesson.get("active_strings", 2), 1, 6, 2)
+        self.selected_strings = normalize_selected_strings(lesson.get("selected_strings"), self.active_strings)
+        self.active_strings = len(self.selected_strings)
         self.active_frets = self._bounded(lesson.get("active_frets", 7), 1, 24, 7)
         self.question_count = self._bounded(lesson.get("question_count", 10), 5, 100, 10)
         self.study_seconds = self._bounded(lesson.get("study_seconds", 60), 10, 300, 60)
@@ -473,6 +476,7 @@ class NoteTrainer:
                 },
                 "lesson": {
                     "active_strings": self.active_strings,
+                    "selected_strings": list(self.selected_strings),
                     "active_frets": self.active_frets,
                     "question_count": self.question_count,
                     "study_seconds": self.study_seconds,
@@ -563,6 +567,9 @@ class NoteTrainer:
         self._label(self.brand, "  NOTES", 9, MUTED, True).pack(side="left")
         self.counter_strip = tk.Frame(toolbar, bg=PANEL)
         self.strings_value = self._counter(self.counter_strip, "Струны", "strings", 1, 6)
+        self.string_picker_button = self._button(self.counter_strip, "Выбор…", self.open_string_picker, compact=True)
+        self.string_picker_button.pack(side="left", padx=(0, 7))
+        Tooltip(self.string_picker_button, "Отметь отдельные струны, например только пятую.")
         self.frets_value = self._counter(self.counter_strip, "Лады", "frets", 1, 24)
         self.questions_value = self._counter(self.counter_strip, "Вопросы", "questions", 5, 100, step=5)
         self.study_value = self._counter(self.counter_strip, "Повтор", "study", 10, 300, step=10)
@@ -1034,7 +1041,7 @@ class NoteTrainer:
         value = self._label(row, "", 10, TEXT, True, width=2)
         value.pack(side="left", padx=1)
         self._button(row, "+", lambda: self.change_setting(kind, step), compact=True).pack(side="left")
-        Tooltip(box, {"strings": "Струны активируются от толстой шестой к тонкой первой.",
+        Tooltip(box, {"strings": "Счётчик: 6-я, затем 5-я и так далее. Для одной струны — «Выбор…».",
                       "frets": "Диапазон 0–N, включая открытую струну.",
                       "questions": "Число заданий в одном тесте.",
                       "study": "Сколько секунд показывать ноты до теста."}[kind])
@@ -1054,8 +1061,62 @@ class NoteTrainer:
             button.config(bg=ACCENT if active else BUTTON_BG,
                           fg="#072139" if active else TEXT)
 
+    def _selected_rows(self) -> tuple[int, ...]:
+        # Legacy stubs/settings without an explicit selection still work.
+        selected = getattr(self, "selected_strings", strings_from_count(self.active_strings))
+        return rows_for_strings(selected)
+
     def _active(self, row: int) -> bool:
-        return self.mode in ("scale", "caged", "forms") or row >= 6 - self.active_strings
+        return getattr(self, "mode", "name") in ("scale", "caged", "forms") or row in self._selected_rows()
+
+    def open_string_picker(self) -> None:
+        """Select individual physical strings for Name / Find / Ear lessons."""
+        old_window = getattr(self, "_string_picker_window", None)
+        if old_window is not None and old_window.winfo_exists():
+            old_window.lift()
+            return
+        window = tk.Toplevel(self.root, bg=BG)
+        self._string_picker_window = window
+        window.title("vGUITAR — Выбор струн")
+        window.resizable(False, False)
+        window.transient(self.root)
+        panel = tk.Frame(window, bg=PANEL, padx=16, pady=14)
+        panel.pack(fill="both", expand=True)
+        self._label(panel, "Какие струны тренировать?", 12, TEXT, True).pack(anchor="w", pady=(0, 4))
+        self._label(panel, "Можно выбрать одну или несколько. Нужна хотя бы одна.",
+                    9, MUTED).pack(anchor="w", pady=(0, 9))
+        options = tk.Frame(panel, bg=PANEL)
+        options.pack(anchor="w")
+        variables = {}
+        for i, number in enumerate((6, 5, 4, 3, 2, 1)):
+            var = tk.BooleanVar(master=window, value=number in self.selected_strings)
+            variables[number] = var
+            tk.Checkbutton(
+                options, text=f"{number}-я · {STRINGS[number-1][1]}",
+                variable=var, bg=PANEL, fg=TEXT, activebackground=PANEL,
+                activeforeground=TEXT, selectcolor=BG, font=(FONT, 11),
+                bd=0, highlightthickness=0, anchor="w",
+            ).grid(row=i // 3, column=i % 3, sticky="w", padx=(0, 12), pady=5)
+        self._string_picker_vars = variables
+        buttons = tk.Frame(panel, bg=PANEL)
+        buttons.pack(fill="x", pady=(13, 0))
+
+        def apply() -> None:
+            chosen = [number for number in (6, 5, 4, 3, 2, 1) if variables[number].get()]
+            if not chosen:
+                messagebox.showwarning("Выбор струн", "Нужно выбрать хотя бы одну струну.", parent=window)
+                return
+            self.selected_strings = normalize_selected_strings(chosen)
+            self.active_strings = len(self.selected_strings)
+            window.destroy()
+            self._save_preferences()
+            self.show_map("Выбранные струны изменены")
+
+        self._button(buttons, "Отмена", window.destroy, compact=True).pack(side="right")
+        self._button(buttons, "Применить", apply, primary=True, compact=True).pack(side="right", padx=(0, 8))
+        window.bind("<Return>", lambda event: apply())
+        window.grab_set()
+        window.focus_set()
 
     def _scale_active_fret(self, fret: int) -> bool:
         left,right = self._scale_area()
@@ -1063,7 +1124,10 @@ class NoteTrainer:
 
     def change_setting(self, kind: str, delta: int) -> None:
         if kind == "strings":
-            self.active_strings = max(1, min(6, self.active_strings + delta))
+            count = max(1, min(6, self.active_strings + delta))
+            if count != self.active_strings:
+                self.selected_strings = strings_from_count(count)
+                self.active_strings = count
         elif kind == "frets":
             self.active_frets = max(1, min(24, self.active_frets + delta))
         elif kind == "questions":
@@ -1317,7 +1381,7 @@ class NoteTrainer:
             self.scale_steps = self._scale_items()
             return [Question(row,fret) for row,fret,_,_ in self.scale_steps]
         pool = [Question(row, fret)
-                for row in range(6 - self.active_strings, 6)
+                for row in self._selected_rows()
                 for fret in range(self.active_frets + 1)]
         if self.mode == "ear":
             # One MIDI pitch per question: never require guessing which of two
@@ -1464,7 +1528,7 @@ class NoteTrainer:
                 self.mistakes.append(f"{self.scale_name} · {NOTE_EN[self.scale_key]} · {self.feedback}")
             elif self.mode == "ear":
                 positions = [(int(STRINGS[r][0]), fret)
-                             for r in range(6 - self.active_strings, 6)
+                             for r in self._selected_rows()
                              for fret in range(self.active_frets + 1)
                              if self._pitch(r, fret) == self._pitch(q.row, q.fret)]
                 options = ", ".join(f"{string}-я/{fret}" for string, fret in positions)
@@ -1539,7 +1603,7 @@ class NoteTrainer:
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.5.3",
+            "app_version": "0.5.4",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -1547,6 +1611,7 @@ class NoteTrainer:
                 "preset": self.preset_name,
                 "tuning_midi": list(self.tuning),
                 "active_strings": self.active_strings,
+                "selected_strings": list(self.selected_strings),
                 "active_frets": self.active_frets,
                 "question_count": len(self.questions),
                 "study_seconds": self.study_seconds,
@@ -1647,7 +1712,9 @@ class NoteTrainer:
             tree.insert("", "end", iid=item_id, values=(
                 str(run.get("finished_at", ""))[:19].replace("T", " "),
                 {"name": "Нота", "find": "Найти", "ear": "На слух", "scale":"Гаммы"}.get(cfg.get("mode"), "?"),
-                f"{cfg.get('active_strings','?')} стр. / {cfg.get('active_frets','?')} л.",
+                (f"{','.join(map(str, cfg['selected_strings']))} стр. / {cfg.get('active_frets','?')} л."
+                 if cfg.get("selected_strings") else
+                 f"{cfg.get('active_strings','?')} стр. / {cfg.get('active_frets','?')} л."),
                 f"{stat['correct']}/{stat['total']} ({stat['accuracy_percent']}%)",
                 f"{stat['mean_seconds']:.2f} с" if stat['mean_seconds'] is not None else "—",
                 f"{stat['median_seconds']:.2f} с" if stat['median_seconds'] is not None else "—",
@@ -1698,6 +1765,7 @@ class NoteTrainer:
     def _update_all(self) -> None:
         self.footer_label.config(text=f"Строй: {self.preset_name}   •   Esc: подготовка   •   ? Справка в меню")
         self.strings_value.config(text=str(self.active_strings))
+        self.string_picker_button.config(text="Выбор: " + ",".join(map(str, self.selected_strings)))
         self.frets_value.config(text=str(self.active_frets))
         self.questions_value.config(text=str(self.question_count))
         self.study_value.config(text=str(self.study_seconds))
@@ -1707,6 +1775,10 @@ class NoteTrainer:
                 frame.pack_forget()
             elif not frame.winfo_manager():
                 frame.pack(side="left",before=self._counter_boxes["study"],padx=(0,7))
+        if self.mode in ("scale", "caged", "forms"):
+            self.string_picker_button.pack_forget()
+        elif not self.string_picker_button.winfo_manager():
+            self.string_picker_button.pack(side="left", before=self._counter_boxes["frets"], padx=(0, 7))
         self._update_answer_layout_buttons()
         self.answer_layout_frame.pack_forget()
         self.scale_options.pack_forget()
@@ -1750,7 +1822,7 @@ class NoteTrainer:
              else f"6/6 · участок {self.scale_position}–{limit}") if self.mode == "scale"
                                      else f"{NOTE_EN[self.caged_key]} · {self.caged_form}-форма · {self.caged_view}" if self.mode == "caged"
                                      else f"{self.forms_kind} · {NOTE_EN[self.forms_key]}" if self.mode == "forms"
-                 else f"{self.active_strings}/6 струн · 0–{self.active_frets}"))
+                 else f"Струны {','.join(map(str, self.selected_strings))} · 0–{self.active_frets}"))
         for fret in range(limit + 1):
             self.board.create_text(fret_center(fret,self.cell_width),11,text=str(fret),
                                    fill=TEXT,font=(FONT,13,"bold"),tags=("fret_number",))

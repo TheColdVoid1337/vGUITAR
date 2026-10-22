@@ -54,6 +54,27 @@ class FretboardTests(unittest.TestCase):
         qs=stub._make_questions()
         self.assertEqual(len({(q.row,q.pitch) for q in qs}),12)
 
+    def test_isolated_fifth_string_quiz(self):
+        stub = NoteTrainer.__new__(NoteTrainer)
+        stub.mode = "name"
+        stub.selected_strings = (5,)
+        stub.active_strings = 1
+        stub.active_frets = 7
+        stub.question_count = 50
+        self.assertEqual(stub._selected_rows(), (4,))
+        self.assertFalse(stub._active(5))
+        self.assertEqual({q.row for q in stub._make_questions()}, {4})
+
+    def test_isolated_fourth_find_quiz(self):
+        stub = NoteTrainer.__new__(NoteTrainer)
+        stub.mode = "find"
+        stub.selected_strings = (4,)
+        stub.active_strings = 1
+        stub.active_frets = 7
+        stub.question_count = 30
+        stub.tuning = STANDARD_MIDI
+        self.assertEqual({q.row for q in stub._make_questions()}, {3})
+
     def test_blank_open_string_supported(self):
         self.assertEqual(Question(5,0).pitch,4)
         self.assertEqual(Question(4,0).pitch,9)

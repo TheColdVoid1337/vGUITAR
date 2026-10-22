@@ -1640,6 +1640,68 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Atomic v0.5.3 code/tests/dev ledger update on main; no GitHub Actions or documentation edits beyond dev JSON"
+    },
+    {
+      "id": "VG-20261023-0202",
+      "date": "2026-10-23",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+    },
+    {
+      "id": "VG-20261023-0203",
+      "date": "2026-10-23",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_strings.py",
+      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+    },
+    {
+      "id": "VG-20261023-0204",
+      "date": "2026-10-23",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_string_selector.py",
+      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+    },
+    {
+      "id": "VG-20261023-0205",
+      "date": "2026-10-23",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_string_picker_smoke.py",
+      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+    },
+    {
+      "id": "VG-20261023-0206",
+      "date": "2026-10-23",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_notes.py",
+      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+    },
+    {
+      "id": "VG-20261023-0207",
+      "date": "2026-10-23",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+    },
+    {
+      "id": "VG-20261023-0208",
+      "date": "2026-10-23",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "Five pure-Python string-selection tests passed locally. Tk regression smoke authored; not executed on published v0.5.4 yet."
+    },
+    {
+      "id": "VG-20261023-0209",
+      "date": "2026-10-23",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic commit with application, pure helper, tests, version, dev ledger. No GitHub Actions, README/docs untouched."
     }
   ]
 }

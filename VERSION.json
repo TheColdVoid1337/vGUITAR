@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "project": "vGUITAR",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "component": "note_trainer",
   "status": "alpha"
 }
