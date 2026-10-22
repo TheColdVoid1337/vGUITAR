@@ -23,6 +23,8 @@ from vguitar_audio import AudioPlayer
 from vguitar_caged import (CAGED_ORDER, INTERVAL_DESCRIPTIONS,
                            caged_positions, caged_shift, next_caged_form)
 from vguitar_scale_shapes import BOX_SCALES, BOX_NAMES, pentatonic_box, next_box
+from vguitar_scale_patterns import (FINGERING_SCALES, shape_names, shape_family,
+                                   scale_fingering, next_shape)
 from vguitar_storage import (
     ensure_dirs, preferences_path, read_preferences, save_preferences,
     save_run, list_runs, run_statistics, export_runs_for_llm,
@@ -381,16 +383,18 @@ class NoteTrainer:
         self.scale_position_mode = (lesson.get("scale_position_mode")
                                     if lesson.get("scale_position_mode") in ("auto", "manual") else "auto")
         self.scale_position = self._bounded(lesson.get("scale_position",0),0,20,0)
-        # Legacy users retain their key and range. Pentatonics now default to
-        # genuine boxes rather than the old arbitrary five-fret rectangle.
-        preferred_view = "box" if self.scale_name in BOX_SCALES else "range"
+        # Explicit 3NPS positions for 7-note scales, blues and pentatonic boxes.
+        # Range/full-neck study remain separate choices.
+        preferred_view = "box" if self.scale_name in FINGERING_SCALES else "range"
         self.scale_view = lesson.get("scale_view", preferred_view)
         if self.scale_view not in ("box", "full", "range"):
             self.scale_view = preferred_view
-        if self.scale_view == "box" and self.scale_name not in BOX_SCALES:
+        if self.scale_view == "box" and self.scale_name not in FINGERING_SCALES:
             self.scale_view = "range"
         self.scale_box_mode = lesson.get("scale_box_mode") if lesson.get("scale_box_mode") in ("auto", "manual") else "auto"
-        self.scale_box = self._bounded(lesson.get("scale_box", 1), 1, 5, 1)
+        self.scale_box = self._bounded(lesson.get("scale_box", 1), 1, 7, 1)
+        if self.scale_view == "box":
+            self.scale_box = min(self.scale_box, len(shape_names(self.scale_name)))
         if self.scale_position_mode == "auto":
             self.scale_position = auto_scale_position(self.tuning, self.scale_name, self.scale_key)
         self.scale_steps: list[tuple[int,int,int,str]] = []
@@ -550,7 +554,7 @@ class NoteTrainer:
             Tooltip(btn, {"name": "Назвать ноту на указанном ладу.",
                           "find": "Найти названную ноту на указанной струне.",
                           "ear": "На слух определить высоту и показать её на грифе; 3 повтора.",
-                          "scale": "Аппликатуры Box 1–5 или карта всех нот выбранной гаммы.",
+                          "scale": "Все гаммы: 7 позиций 3NPS, 5 пентатонических/блюзовых боксов, карта грифа.",
                            "caged": "Пять подвижных форм мажорного аккорда: корень, терция, квинта."}[mode])
         self.history_button = self._button(toolbar, "История", self.open_history, compact=True)
         Tooltip(self.history_button, "Результаты прошлых тестов и экспорт выбранных запусков.")
@@ -1013,9 +1017,11 @@ class NoteTrainer:
 
     def _refresh_scale_choices(self) -> None:
         if self.scale_view == "box":
-            self._scale_comboboxes[3].config(values=["Авто", *BOX_NAMES], state="readonly")
+            names = shape_names(self.scale_name)
+            self.scale_box = max(1, min(self.scale_box, len(names)))
+            self._scale_comboboxes[3].config(values=["Авто", *names], state="readonly")
             self.scale_position_choice.set("Авто" if self.scale_box_mode == "auto"
-                                           else BOX_NAMES[self.scale_box - 1])
+                                           else names[self.scale_box - 1])
         elif self.scale_view == "range":
             self._scale_comboboxes[3].config(values=["Авто", *[str(n) for n in range(21)]], state="readonly")
             self.scale_position_choice.set("Авто" if self.scale_position_mode == "auto"
@@ -1030,15 +1036,13 @@ class NoteTrainer:
         self.scale_key = NOTE_EN.index(self.scale_key_choice.get())
         view = {"Аппликатуры":"box", "Весь звукоряд":"full",
                 "Участок ладов":"range"}.get(self.scale_view_choice.get(), "range")
-        # Switching from a non-pentatonic to a pentatonic defaults to real boxes.
+        # Every scale now has its own fingering family; legacy fret ranges
+        # still exist separately and are never presented as canonical boxes.
         if self.scale_name != previous_scale and (event is None or event.widget is self._scale_comboboxes[0]):
-            if self.scale_name in BOX_SCALES and self.scale_view == "range":
+            if view == "range":
                 view = "box"
-            elif self.scale_name not in BOX_SCALES and view == "box":
-                view = "range"
-        if view == "box" and self.scale_name not in BOX_SCALES:
+        if view == "box" and self.scale_name not in FINGERING_SCALES:
             view = "range"
-            self._set_status("Box 1–5 сейчас доступны для мажорной и минорной пентатоники")
         changed_view = self.scale_view != view
         self.scale_view = view
         self.scale_view_choice.set({"box":"Аппликатуры", "full":"Весь звукоряд",
@@ -1046,8 +1050,9 @@ class NoteTrainer:
         if not changed_view:
             selected = self.scale_position_choice.get()
             if view == "box":
-                if selected in BOX_NAMES:
-                    self.scale_box_mode, self.scale_box = "manual", BOX_NAMES.index(selected) + 1
+                names = shape_names(self.scale_name)
+                if selected in names:
+                    self.scale_box_mode, self.scale_box = "manual", names.index(selected) + 1
                 elif selected == "Авто":
                     self.scale_box_mode = "auto"
             elif view == "range":
@@ -1063,7 +1068,7 @@ class NoteTrainer:
 
     def _scale_items(self) -> list[tuple[int, int, int, str]]:
         if self.scale_view == "box":
-            return pentatonic_box(self.tuning, self.scale_name, self.scale_key, self.scale_box)
+            return scale_fingering(self.tuning, self.scale_name, self.scale_key, self.scale_box)
         if self.scale_view == "range":
             return scale_positions(self.tuning, self.scale_name, self.scale_key, self.scale_position)
         allowed, labels = scale_pattern(self.scale_name, self.scale_key)
@@ -1111,7 +1116,7 @@ class NoteTrainer:
             self.caged_form = next_caged_form(self.caged_form)
         if self.mode == "scale" and self.phase == "result":
             if self.scale_view == "box" and self.scale_box_mode == "auto":
-                self.scale_box = next_box(self.scale_box)
+                self.scale_box = next_shape(self.scale_name, self.scale_box)
                 self._refresh_scale_choices()
             elif self.scale_view == "range" and self.scale_position_mode == "auto":
                 self.scale_position = auto_scale_position(self.tuning, self.scale_name,
@@ -1134,7 +1139,8 @@ class NoteTrainer:
                 self._scale_items()
             except ValueError:
                 messagebox.showwarning("Позиция недоступна",
-                    "Гамма не помещается в выбранную позицию. Измени положение или строй.",
+                    "Аппликатура недоступна для этого строя или диапазона ладов. "
+                    "Для нестандартного строя попробуй «Участок ладов» или «Весь звукоряд».",
                     parent=self.root)
                 return
         self._cancel_study_timer()
@@ -1252,7 +1258,8 @@ class NoteTrainer:
             self.show_map("Упражнение недоступно")
             messagebox.showwarning("Позиция недоступна",
                 ("Для CAGED нужен стандартный интервальный строй (Standard, E♭ или D Standard)."
-                 if self.mode == "caged" else "Гамма не помещается в пяти соседних ладах. Выбери другую позицию."),
+                 if self.mode == "caged" else "Аппликатура недоступна для выбранного строя. "
+                 "Используй стандартные интервалы струн или переключись на карту грифа."),
                 parent=self.root)
             return
         self.audio.preload([self._pitch(q.row, q.fret) for q in self.questions])
@@ -1400,7 +1407,7 @@ class NoteTrainer:
     def _finish_run(self) -> None:
         self.current_run = {
             "schema_version": 1,
-            "app_version": "0.5.1",
+            "app_version": "0.5.2",
             "run_id": self.run_id,
             "started_at": self.run_started_at,
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -1426,6 +1433,8 @@ class NoteTrainer:
                 "caged_shape_notes": len(self.caged_steps) if self.mode == "caged" else None,
                 "scale_view": self.scale_view if self.mode == "scale" else None,
                 "scale_box": self.scale_box if self.mode == "scale" and self.scale_view == "box" else None,
+                "scale_shape_family": shape_family(self.scale_name) if self.mode == "scale" and self.scale_view == "box" else None,
+                "scale_shape_label": shape_names(self.scale_name)[self.scale_box - 1] if self.mode == "scale" and self.scale_view == "box" else None,
                 "scale_box_mode": self.scale_box_mode if self.mode == "scale" and self.scale_view == "box" else None,
                 "position_width_frets": (self._scale_area()[1] - self._scale_area()[0] + 1
                                          if self.mode == "scale" else None),
@@ -1702,13 +1711,17 @@ class NoteTrainer:
                     degree = caged_notes.get((row, fret)) if self.mode == "caged" else None
                     scale_root = (self.mode == "scale" and in_shape and
                                   scale_coords.get((row, fret)) == "1")
-                    special = AMBER if scale_root else {"1": ACCENT, "3": AMBER, "5": GREEN}.get(degree)
+                    scale_blue = (self.mode == "scale" and in_shape and
+                                  scale_coords.get((row, fret)) == "♭5" and
+                                  self.scale_name == "Блюзовая")
+                    special = AMBER if scale_root else "#d3a5ff" if scale_blue else {"1": ACCENT, "3": AMBER, "5": GREEN}.get(degree)
                     fill_color = ("#236e70" if highlight else "#2b607f") if in_shape else "#283443"
                     self.board.create_oval(*disc, fill=fill_color,
                                            outline=(GREEN if highlight else special or "#4b9abd") if in_shape else "#475363",
                                            width=2 if degree or scale_root else 1,
                                            tags=("note_disc", "scale_note" if self.mode == "scale" and in_shape
-                                                 else "scale_outside" if self.mode == "scale" else "other_note"))
+                                                 else "scale_outside" if self.mode == "scale" else "other_note",
+                                                  "blue_note" if scale_blue else "ordinary_note"))
                     self.board.create_text(center_x, ymid - 5, text=self._note_name(pc),
                                            fill=special or (TEXT if in_shape else FAINT), font=(FONT, 10, "bold"))
                     self.board.create_text(center_x, ymid + 7,
@@ -1875,10 +1888,11 @@ class NoteTrainer:
         if self.phase in ("ready", "study"):
             self.quiz_heading.config(text="Подготовка" if self.phase == "ready" else f"Повторение · {self.study_left} с")
             if self.phase == "ready":
-                caption = (f"{BOX_NAMES[self.scale_box-1]}: корни — янтарные, ноты бокса — голубые." if
-                           self.mode == "scale" and self.scale_view == "box" else
+                caption = (f"{shape_names(self.scale_name)[self.scale_box-1]} · "
+                           f"{'3 ноты на каждой струне' if shape_family(self.scale_name) == '3nps' else 'Блюзовая ♭5 — фиолетовая' if shape_family(self.scale_name) == 'blues_box' else '2 ноты на каждой струне'}; корни — янтарные."
+                           if self.mode == "scale" and self.scale_view == "box" else
                            "Карта открыта. Изучи ноты перед тестом.")
-                self._label(self.quiz_body,caption,10,MUTED).pack(anchor="w")
+                self._label(self.quiz_body,caption,10,MUTED,wraplength=320,justify="left").pack(anchor="w")
                 button = self._button(self.action_row,"Повторение ▶",self.start_study,primary=True,compact=True)
                 button.pack(side="left")
                 Tooltip(button,"Начать повторение с таймером; ноты уже видны в подготовке.")
@@ -1915,7 +1929,7 @@ class NoteTrainer:
                             bg="#19364d").pack(anchor="w")
             elif self.mode == "scale":
                 degree = self.scale_steps[self.index][3]
-                shape_name = (BOX_NAMES[self.scale_box-1] if self.scale_view == "box" else
+                shape_name = (shape_names(self.scale_name)[self.scale_box-1] if self.scale_view == "box" else
                               "Весь гриф" if self.scale_view == "full" else
                               f"Лады {self.scale_position}–{self.scale_position+4}")
                 heading = f"{self.scale_name} · {NOTE_EN[self.scale_key]} · {shape_name} · {self.index+1}/{len(self.scale_steps)}"

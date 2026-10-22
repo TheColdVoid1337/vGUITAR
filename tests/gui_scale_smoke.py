@@ -10,6 +10,7 @@ with tempfile.TemporaryDirectory() as rootpath:
     root=tk.Tk(); app=NoteTrainer(root); app.audio.play=MagicMock(return_value=True)
     root.geometry('1024x768');root.update()
     app.change_mode('scale');root.update()
+    app.scale_view_choice.set('Участок ладов');app._scale_option_changed();root.update()
     assert app.mode=='scale'
     assert app.scale_position_mode=='auto'
     assert app.scale_position_choice.get()=='Авто'

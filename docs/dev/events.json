@@ -1500,6 +1500,76 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Atomic v0.5.1 on main with code, tests and docs/dev/events.json; no README/docs edits or GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0184",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+    },
+    {
+      "id": "VG-20261022-0185",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_scale_smoke.py",
+      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+    },
+    {
+      "id": "VG-20261022-0186",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_scale_auto_smoke.py",
+      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+    },
+    {
+      "id": "VG-20261022-0187",
+      "date": "2026-10-22",
+      "action": "github.add_file",
+      "status": "success",
+      "path": "vguitar_scale_patterns.py",
+      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+    },
+    {
+      "id": "VG-20261022-0188",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_scale_fingerings.py",
+      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+    },
+    {
+      "id": "VG-20261022-0189",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_all_scale_fingerings_smoke.py",
+      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+    },
+    {
+      "id": "VG-20261022-0190",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+    },
+    {
+      "id": "VG-20261022-0191",
+      "date": "2026-10-22",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "8 new pure pattern tests and py_compile passed across all 7 scale families x 12 keys; full GUI smoke added but not executed on this exact GitHub source; real WASAPI hardware not tested"
+    },
+    {
+      "id": "VG-20261022-0192",
+      "date": "2026-10-22",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic v0.5.2 GitHub commit on main; docs and README unchanged except development JSON ledger; no GitHub Actions"
     }
   ]
 }
