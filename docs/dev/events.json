@@ -1268,6 +1268,68 @@
       "detail": "Drive metadata reports 6970 bytes; raw file read confirms 11 indexed assets and v0.4.8 entry",
       "path": "file_index.json",
       "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+    },
+    {
+      "id": "VG-20261022-0155",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "vguitar_notes.py",
+      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0156",
+      "date": "2026-10-22",
+      "action": "github.update_file",
+      "status": "success",
+      "path": "VERSION.json",
+      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0157",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/test_scale_mode.py",
+      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0158",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_scale_smoke.py",
+      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0159",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_scale_auto_smoke.py",
+      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0160",
+      "date": "2026-10-22",
+      "action": "github.update_tests",
+      "status": "success",
+      "path": "tests/gui_smoke.py",
+      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+    },
+    {
+      "id": "VG-20261022-0161",
+      "date": "2026-10-22",
+      "action": "local.verify",
+      "status": "success",
+      "detail": "21 unittest tests pass; GUI checks for scale, auto position, history, ear mode, settings and fretboard pass on virtual display; audio hardware unchanged"
+    },
+    {
+      "id": "VG-20261022-0162",
+      "date": "2026-10-22",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Atomic release v0.4.9 in main with code+tests+dev JSON ledger. No documentation edits or GitHub Actions"
     }
   ]
 }

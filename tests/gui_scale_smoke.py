@@ -11,6 +11,11 @@ with tempfile.TemporaryDirectory() as rootpath:
     root.geometry('1024x768');root.update()
     app.change_mode('scale');root.update()
     assert app.mode=='scale'
+    assert app.scale_position_mode=='auto'
+    assert app.scale_position_choice.get()=='Авто'
+    # Note labels are present in ready mode, before the study timer.
+    assert app.phase=='ready'
+    assert len(app.board.find_withtag('note_disc'))>0
     assert app._active(0) and app._active(5)
     assert app.scale_options.winfo_manager()=='pack'
     assert not app._counter_boxes['strings'].winfo_manager()
@@ -22,7 +27,8 @@ with tempfile.TemporaryDirectory() as rootpath:
     app.start_study();root.update()
     assert app.phase=='study'
     app.start_quiz();root.update()
-    assert app.phase=='quiz' and len(app.questions)==8
+    assert app.phase=='quiz' and len(app.questions)>8
+    expected_count=len(app.scale_steps)
     assert app.scale_steps[0][3]=='1'
     assert app.quiz_body.winfo_children()
     # Wrong click on an adjacent semitone on first step (E2 vs F2): recorded.
@@ -42,12 +48,14 @@ with tempfile.TemporaryDirectory() as rootpath:
         app._click_board(type('Event',(),{'x':xpos,'y':TOP+q.row*ROW_H+ROW_H/2})())
         assert app.checked and app.feedback_is_correct, (app.index, q, xpos)
         app.next_question();root.update()
-    assert app.phase=='result' and len(app.responses)==8
-    assert app.correct==7
+    assert app.phase=='result' and len(app.responses)==expected_count
+    assert app.correct==expected_count-1
     runs,_=list_runs();assert len(runs)==1
     assert runs[0]['configuration']['scale']=='Натуральный минор'
     assert runs[0]['configuration']['key']=='E'
-    assert runs[0]['questions'][-1]['degree']=='8'
+    assert runs[0]['configuration']['scale_shape_notes']==expected_count
+    assert runs[0]['configuration']['position_mode']=='manual'
+    assert len({(e['string_number'],e['fret']) for e in runs[0]['questions']}) == expected_count
     app.export_current();assert 'scale_step' in root.clipboard_get()
     app.show_map();app.change_mode('name');root.update()
     assert app._counter_boxes['strings'].winfo_manager()=='pack'
