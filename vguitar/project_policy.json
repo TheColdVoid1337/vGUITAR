@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "project": "vGUITAR",
+  "github": {
+    "repository": "TheColdVoid1337/vGUITAR",
+    "default_branch": "main",
+    "source_of_truth": true
+  },
+  "documentation": {
+    "approval_required": true,
+    "protected_paths": [
+      "README.md",
+      "README.en.md",
+      "vguitar/assets/vguitar-icon.png",
+      "CONTRIBUTING.md",
+      "CODE_OF_CONDUCT.md",
+      "SECURITY.md",
+      "vguitar/docs/**"
+    ],
+    "exceptions": [
+      "vguitar/docs/dev/events.json"
+    ]
+  },
+  "event_journal": {
+    "path": "vguitar/docs/dev/events.json",
+    "format": "json-object-with-events-array",
+    "events_key": "events",
+    "privacy": "public-safe event metadata only; exclude credentials, external storage IDs, local absolute paths and internal conversation details"
+  },
+  "assets": {
+    "committed_public_assets": "vguitar/assets/",
+    "local_artifacts_ignored": true,
+    "external_storage_configuration": "untracked local settings only"
+  },
+  "testing": {
+    "github_actions_enabled": false,
+    "verification": "local",
+    "manual_validation_when_unavailable": true
+  }
+}

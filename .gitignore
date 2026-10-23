@@ -442,6 +442,8 @@ build/
 htmlcov/
 *.zip
 *.png
+!/vguitar/assets/
+!/vguitar/assets/*.png
 
 # vGUITAR local settings and results
 /settings/
@@ -457,3 +459,7 @@ htmlcov/
 *.pem
 *.key
 *.p12
+
+# Relocated private runtime data
+/vguitar/data/
+/vguitar/.private/

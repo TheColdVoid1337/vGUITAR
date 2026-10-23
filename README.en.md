@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/vguitar-icon.svg" width="160" alt="vGUITAR Note Trainer logo">
+  <img src="vguitar/assets/vguitar-icon.png" width="160" alt="vGUITAR Note Trainer logo">
 </p>
 
 <h1 align="center">vGUITAR Note Trainer</h1>
@@ -10,11 +10,11 @@
 
 <p align="center">
   <a href="https://github.com/TheColdVoid1337/vGUITAR/releases">Releases</a> ·
-  <a href="docs/USER_GUIDE.md">User guide (RU)</a> ·
-  <a href="docs/CHANGELOG.md">Changelog (RU)</a>
+  <a href="vguitar/docs/USER_GUIDE.md">User guide (RU)</a> ·
+  <a href="vguitar/docs/CHANGELOG.md">Changelog (RU)</a>
 </p>
 
-**Current version: 0.5.4 (alpha)** · Python 3.9+ / Tkinter · [MIT License](LICENSE)
+**Current version: 0.5.5 (alpha)** · Python 3.9+ / Tkinter · [MIT License](LICENSE)
 
 **vGUITAR Note Trainer** is a Windows desktop application for learning fretboard notes, intervals, scales, and chord shapes. It combines note-identification, note-location, and ear-training exercises with dedicated practice modes for scales, CAGED, power chords, and triads.
 
@@ -46,6 +46,12 @@ Alternatively, [download the source code](https://github.com/TheColdVoid1337/vGU
 
 On the first launch, the script creates a `.venv` environment and installs packages from `requirements.txt` when needed. This release does not include a prebuilt Windows installer.
 
+## Updating and local data
+
+Run `git pull --ff-only origin main` to update a Git clone, then launch `RUN.bat` again.
+
+Local settings and training history are stored in `vguitar/data/` and are not committed. The first launch after upgrading safely copies any existing JSON data from the old root-level `settings/` and `results/` folders without deleting the originals. After confirming that the history is available, you may remove the old copies manually.
+
 ## Getting started
 
 1. Select **«Назвать»** (Name), **«Найти»** (Find), or **«На слух»** (Ear).
@@ -56,16 +62,20 @@ On the first launch, the script creates a `.venv` environment and installs packa
 
 Use **«Гаммы»** (Scales), **«CAGED»**, and **«Формы»** (Shapes) to study musical structures. Each mode provides its own choices for key, pattern, and exercise.
 
-The [user guide](docs/USER_GUIDE.md) provides further details about controls, settings, and training modes (currently available in Russian).
+The [user guide](vguitar/docs/USER_GUIDE.md) provides further details about controls, settings, and training modes (currently available in Russian).
 
 ## Documentation
 
-- [User guide (Russian)](docs/USER_GUIDE.md)
-- [Changelog (Russian)](docs/CHANGELOG.md)
-- [v0.5.4 release notes (Russian)](docs/releases/v0.5.4.md)
-- [Version history](docs/releases/HISTORY.md)
+- [User guide (Russian)](vguitar/docs/USER_GUIDE.md)
+- [Changelog (Russian)](vguitar/docs/CHANGELOG.md)
+- [v0.5.4 release notes (Russian)](vguitar/docs/releases/v0.5.4.md)
+- [Version history](vguitar/docs/releases/HISTORY.md)
 - [Contributing](CONTRIBUTING.md)
 - [Security policy](SECURITY.md)
+
+## About the application
+
+Click the **?** button in the toolbar to see the current version, app icon, [developer profile](https://github.com/TheColdVoid1337), and [project repository](https://github.com/TheColdVoid1337/vGUITAR).
 
 ## Project status
 
