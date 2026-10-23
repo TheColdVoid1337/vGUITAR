@@ -28,7 +28,7 @@ def first(parent, kind, caption=None):
 
 def choose(app, root, key, label):
     widget = app._fret_visual_controls[key]
-    assert widget.cget("state") == "readonly", key
+    assert widget.instate(("readonly",)), f"{key}: {widget.state()}"
     widget.set(label)
     widget.event_generate("<<ComboboxSelected>>")
     root.update()
