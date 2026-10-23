@@ -20,6 +20,8 @@
 
 The application runs locally without an account. An internet connection may be needed to install its dependencies for the first time.
 
+![vGUITAR Note Trainer main window](vguitar/assets/screenshot-main.png)
+
 ## Features
 
 - **Note recognition.** Identify notes from a string/fret position, find notes on the fretboard, or recognize a played note by ear.
