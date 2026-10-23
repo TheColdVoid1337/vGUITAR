@@ -22,7 +22,7 @@ class ScreenshotPublishingScriptTests(unittest.TestCase):
             'README.md',
             'README.en.md',
             'git diff --cached --name-only',
-            'git push origin main',
+            'Invoke-Git push origin main',
             'WriteAllText',
         ):
             with self.subTest(required=required):
