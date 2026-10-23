@@ -50,9 +50,13 @@ with tempfile.TemporaryDirectory() as tmp:
         app.next_question()
     assert app.phase=='result'
     assert app.current_run['configuration']['scale_shape_family']=='blues_box'
-    app.show_map();app.scale_choice.set('Мажор');app._scale_option_changed()
+    app.show_map()
+    app.scale_choice.set('Мажор')
+    app.scale_key_choice.set('D')
+    app._scale_option_changed();root.update()
+    assert app.scale_name == 'Мажор' and app.scale_key == NOTE_EN.index('D')
     app.scale_position_choice.set('3NPS 1');app._scale_option_changed();root.update()
-    assert app._scale_items()[0][:2]==(5,10)  # D major starts at sixth-string D
+    assert app._scale_items()[0][:2] == (5,10)  # D major: low-E string, fret 10
     app.start_quiz();root.update()
     assert len(app.questions)==18
     q=app._current()
