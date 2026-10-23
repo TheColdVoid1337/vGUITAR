@@ -28,6 +28,32 @@ class ScreenshotPublishingScriptTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, source)
 
+    def test_png_dimensions_use_full_big_endian_values(self):
+        # Previously Windows PowerShell returned 46x22 for 1070x790:
+        # the first three bytes had been lost by byte-sized -shl.
+        src = SCRIPT.read_text(encoding="ascii")
+        self.assertNotIn("-shl", src)
+        self.assertIn("([uint64]$Data[$Offset + 2] * 256)", src)
+        import re
+        import shutil
+        import subprocess
+
+        shell = next((exe for exe in ("pwsh", "powershell.exe", "powershell")
+                      if shutil.which(exe)), None)
+        if shell is None:
+            self.skipTest("PowerShell not installed here")
+        match = re.search(r"(?ms)^function Read-UInt32BE\([^\n]+\) \{.*?^\}", src)
+        self.assertIsNotNone(match)
+        header = [137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13,
+                  73, 72, 68, 82, 0, 0, 4, 46, 0, 0, 3, 22]
+        command = (match.group(0) + "; $Data = [byte[]](" +
+                   ",".join(map(str, header)) +
+                   "); Write-Output ((Read-UInt32BE $Data 16).ToString() + ',' + " +
+                   "(Read-UInt32BE $Data 20).ToString())")
+        result = subprocess.run([shell, "-NoProfile", "-Command", command],
+                                capture_output=True, text=True, check=True)
+        self.assertEqual(result.stdout.strip(), "1070,790")
+
 
 if __name__ == "__main__":
     unittest.main()

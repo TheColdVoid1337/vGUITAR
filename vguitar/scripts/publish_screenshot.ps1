@@ -45,10 +45,15 @@ for ($i = 0; $i -lt 8; $i++) {
     if ($bytes[$i] -ne $signature[$i]) { throw "Screenshot file is not a PNG." }
 }
 function Read-UInt32BE([byte[]]$Data, [int]$Offset) {
-    return (($Data[$Offset] -shl 24) -bor
-            ($Data[$Offset + 1] -shl 16) -bor
-            ($Data[$Offset + 2] -shl 8) -bor
-            $Data[$Offset + 3])
+    if ($Offset -lt 0 -or ($Offset + 4) -gt $Data.Length) {
+        throw "PNG dimension field is incomplete."
+    }
+    # Shift operators can silently truncate values when applied to byte data.
+    # Multiply as UInt64 before combining so 0x0000042E correctly yields 1070.
+    return [uint32](([uint64]$Data[$Offset] * 16777216) +
+                    ([uint64]$Data[$Offset + 1] * 65536) +
+                    ([uint64]$Data[$Offset + 2] * 256) +
+                    [uint64]$Data[$Offset + 3])
 }
 $width = Read-UInt32BE $bytes 16
 $height = Read-UInt32BE $bytes 20
