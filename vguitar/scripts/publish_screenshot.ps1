@@ -58,25 +58,23 @@ if ($width -lt 600 -or $height -lt 400) {
 Write-Host ("Screenshot: {0}x{1} ({2} bytes)" -f $width, $height, $bytes.Length)
 
 $marker = "vguitar/assets/screenshot-main.png"
-$entries = @(
-    @{ File = "README.md"; Header = "## Установка";
-       Section = "## Интерфейс"; Alt = "Главное окно vGUITAR Note Trainer" },
-    @{ File = "README.en.md"; Header = "## Installation";
-       Section = "## Application preview"; Alt = "vGUITAR Note Trainer main window" }
-)
+# Keep this script ASCII-only for Windows PowerShell 5.1 compatibility.
+# Insert the screenshot before the first Markdown section in each README.
+$readmeFiles = @("README.md", "README.en.md")
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-foreach ($entry in $entries) {
-    $path = Join-Path $repoRoot $entry.File
+foreach ($name in $readmeFiles) {
+    $path = Join-Path $repoRoot $name
     $original = [System.IO.File]::ReadAllText($path)
     if ($original.Contains($marker)) { continue }
-    $header = $entry.Header
-    $at = $original.IndexOf($header, [System.StringComparison]::Ordinal)
-    if ($at -lt 0) { throw ("Missing README heading {0} in {1}" -f $header, $entry.File) }
+    $firstSection = [System.Text.RegularExpressions.Regex]::Match(
+        $original, '(?m)^## '
+    )
+    if (-not $firstSection.Success) {
+        throw ("No Markdown section found in {0}" -f $name)
+    }
     $newline = if ($original.Contains("`r`n")) { "`r`n" } else { "`n" }
-    $addition = $entry.Section + $newline + $newline +
-        ("![{0}]({1})" -f $entry.Alt, $marker) +
-        $newline + $newline
-    $updated = $original.Insert($at, $addition)
+    $addition = "![vGUITAR Note Trainer main window]($marker)" + $newline + $newline
+    $updated = $original.Insert($firstSection.Index, $addition)
     [System.IO.File]::WriteAllText($path, $updated, $utf8NoBom)
 }
 

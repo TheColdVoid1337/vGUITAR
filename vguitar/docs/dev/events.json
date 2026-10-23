@@ -1877,6 +1877,26 @@
       "date": "2026-10-23",
       "action": "github.commit",
       "status": "success"
+    },
+    {
+      "id": "VG-20261023-0277",
+      "date": "2026-10-23",
+      "action": "tools.fix_windows_powershell_encoding",
+      "status": "success",
+      "path": "vguitar/scripts/publish_screenshot.ps1"
+    },
+    {
+      "id": "VG-20261023-0278",
+      "date": "2026-10-23",
+      "action": "tests.add_powershell_encoding_regression",
+      "status": "success",
+      "path": "vguitar/tests/test_screenshot_publish_script.py"
+    },
+    {
+      "id": "VG-20261023-0279",
+      "date": "2026-10-23",
+      "action": "github.commit",
+      "status": "success"
     }
   ]
 }
