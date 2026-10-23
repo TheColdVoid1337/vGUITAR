@@ -35,7 +35,7 @@ from vguitar_wood import draw_wood_grain
 from vguitar_visual import (
     STRING_SETS, STRING_MATERIALS, NUT_THICKNESSES_MM, NUT_MATERIALS,
     FRET_CROWNS_MM, FRET_MATERIALS, clean_visual_settings,
-    string_widths, nut_width_px, fret_width_px, material_label,
+    string_widths, nut_width_px, fret_width_px, fret_crown_label, material_label,
 )
 from vguitar_storage import (
     ensure_dirs, preferences_path, read_preferences, save_preferences,
@@ -1048,7 +1048,7 @@ class NoteTrainer:
             )),
             (("Лады", "Frets"), (
                 ("fret_mm", "Ширина коронки", "Crown width",
-                 [(f"{v:.2f} mm", v) for v in FRET_CROWNS_MM]),
+                 [(fret_crown_label(v), v) for v in FRET_CROWNS_MM]),
                 ("fret_material", "Материал", "Material",
                  [(material_label(FRET_MATERIALS, k, self.language), k)
                   for k in FRET_MATERIALS]),

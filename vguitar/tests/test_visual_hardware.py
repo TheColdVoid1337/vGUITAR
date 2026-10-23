@@ -5,7 +5,7 @@ import unittest
 from vguitar_visual import (
     STRING_SETS, STRING_MATERIALS, NUT_THICKNESSES_MM, NUT_MATERIALS,
     FRET_CROWNS_MM, FRET_MATERIALS, VISUAL_DEFAULTS, clean_visual_settings,
-    string_widths, nut_width_px, fret_width_px, material_label,
+    string_widths, nut_width_px, fret_width_px, fret_crown_label, material_label,
 )
 from vguitar_wood import draw_wood_grain
 from vguitar_notes import FRETBOARD_THEMES, blend_hex
@@ -46,12 +46,22 @@ class HardwareTests(unittest.TestCase):
                 self.assertRegex(color, r"^#[0-9a-f]{6}$")
         self.assertEqual(material_label(NUT_MATERIALS, "bone", "en"), "Bone")
         self.assertEqual(material_label(NUT_MATERIALS, "bone", "ru"), "Кость")
+        self.assertEqual(material_label(NUT_MATERIALS, "copper", "ru"), "Медь")
+        self.assertEqual(material_label(NUT_MATERIALS, "copper", "en"), "Copper")
 
     def test_realistic_hardware_dimensions_and_pixel_limits(self):
         self.assertEqual(NUT_THICKNESSES_MM[0], 3.0)
-        self.assertEqual(NUT_THICKNESSES_MM[-1], 6.0)
+        self.assertEqual(NUT_THICKNESSES_MM[-1], 8.0)
+        self.assertEqual(len(NUT_THICKNESSES_MM), 11)
+        self.assertTrue(all(abs((b - a) - 0.5) < 1e-10
+                            for a, b in zip(NUT_THICKNESSES_MM, NUT_THICKNESSES_MM[1:])))
         self.assertAlmostEqual(FRET_CROWNS_MM[0], 2.03)
-        self.assertAlmostEqual(FRET_CROWNS_MM[-1], 2.99)
+        self.assertAlmostEqual(FRET_CROWNS_MM[-2], 2.99)
+        self.assertAlmostEqual(FRET_CROWNS_MM[-1], 4.3)
+        self.assertEqual(fret_crown_label(4.3), "SINTOMS 4.3mm")
+        self.assertEqual(fret_crown_label(2.99), "2.99 mm")
+        self.assertGreater(nut_width_px(8.0), nut_width_px(6.0))
+        self.assertGreater(fret_width_px(4.3), fret_width_px(2.99))
         self.assertTrue(all(nut_width_px(a) < nut_width_px(b)
                             for a, b in zip(NUT_THICKNESSES_MM, NUT_THICKNESSES_MM[1:])))
         self.assertTrue(all(fret_width_px(a) < fret_width_px(b)
@@ -67,6 +77,10 @@ class HardwareTests(unittest.TestCase):
                                                 "string_material": "cobalt"}),
                          {**VISUAL_DEFAULTS, "nut_mm": 6.0, "fret_mm": 2.99,
                           "string_material": "cobalt"})
+        self.assertEqual(clean_visual_settings({"nut_mm": 8.0, "fret_mm": 4.3,
+                                                "nut_material": "copper"}),
+                         {**VISUAL_DEFAULTS, "nut_mm": 8.0, "fret_mm": 4.3,
+                          "nut_material": "copper"})
 
     def test_ebony_inactive_contrast_with_unchanged_active_wood(self):
         ebony = FRETBOARD_THEMES["ebony"]

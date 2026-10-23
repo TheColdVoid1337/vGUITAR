@@ -75,23 +75,23 @@ with tempfile.TemporaryDirectory() as folder:
 
     choose(app, root, "string_set", "12–56")
     choose(app, root, "string_material", "Чистый никель")
-    choose(app, root, "nut_mm", "6 mm")
-    choose(app, root, "nut_material", "Латунь")
-    choose(app, root, "fret_mm", "2.99 mm")
+    choose(app, root, "nut_mm", "8 mm")
+    choose(app, root, "nut_material", "Медь")
+    choose(app, root, "fret_mm", "SINTOMS 4.3mm")
     choose(app, root, "fret_material", "EVO Gold")
     app._fret_visual_controls["inlay_radius"].set(7)
     root.update()
     assert app.fretboard_visual == {
         "string_set": "12–56", "string_material": "pure_nickel",
-        "nut_mm": 6.0, "nut_material": "brass",
-        "fret_mm": 2.99, "fret_material": "evo_gold", "inlay_radius": 7.0,
+        "nut_mm": 8.0, "nut_material": "copper",
+        "fret_mm": 4.3, "fret_material": "evo_gold", "inlay_radius": 7.0,
     }
     nut = app.board.find_withtag("nut")[0]
     x0, _, x1, _ = app.board.coords(nut)
-    assert abs(x1 - x0 - nut_width_px(6.0)) < .01
+    assert abs(x1 - x0 - nut_width_px(8.0)) < .01
     wire = app.board.find_withtag("fret_wire")[0]
     assert app.board.itemcget(wire, "fill") == "#d2ad61"
-    assert abs(float(app.board.itemcget(wire, "width")) - fret_width_px(2.99)) < .01
+    assert abs(float(app.board.itemcget(wire, "width")) - fret_width_px(4.3)) < .01
     high_e = app.board.find_withtag("guitar_string_1")[0]
     assert abs(float(app.board.itemcget(high_e, "width")) - string_widths("12–56")[0]) < .01
 
@@ -114,6 +114,8 @@ with tempfile.TemporaryDirectory() as folder:
     app._wood_texture_checkbox.invoke()
     app._wood_grain_shuffle_button.invoke()
     choose(app, root, "string_set", "9–42")
+    choose(app, root, "nut_mm", "8 mm")
+    choose(app, root, "fret_mm", "SINTOMS 4.3mm")
     choose(app, root, "nut_material", "Кость")
     choose(app, root, "fret_material", "Нержавеющая сталь")
     root.update()
@@ -127,6 +129,8 @@ with tempfile.TemporaryDirectory() as folder:
     assert prefs["fretboard_texture"]
     assert prefs["fretboard_grain_seed"] == new_seed
     assert prefs["fretboard_visual"]["string_set"] == "9–42"
+    assert prefs["fretboard_visual"]["nut_mm"] == 8.0
+    assert prefs["fretboard_visual"]["fret_mm"] == 4.3
     assert prefs["fretboard_visual"]["nut_material"] == "bone"
     assert prefs["fretboard_visual"]["fret_material"] == "stainless"
 
@@ -140,6 +144,8 @@ with tempfile.TemporaryDirectory() as folder:
     assert app.fretboard_texture
     assert app.fretboard_grain_seed == new_seed
     assert app.fretboard_visual["string_set"] == "9–42"
+    assert app.fretboard_visual["nut_mm"] == 8.0
+    assert app.fretboard_visual["fret_mm"] == 4.3
     assert app.board.find_withtag("wood_texture")
     app.audio.close()
     root.destroy()

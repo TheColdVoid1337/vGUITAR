@@ -24,17 +24,17 @@ STRING_MATERIALS = {
     "stainless": ("Нержавеющая сталь", "Stainless steel", "#dce3e9"),
     "cobalt": ("Кобальтовый сплав", "Cobalt alloy", "#899fae"),
 }
-NUT_THICKNESSES_MM = (3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0)
+NUT_THICKNESSES_MM = tuple(3.0 + step * 0.5 for step in range(11))
 NUT_MATERIALS = {
     "plastic": ("Пластик", "Plastic", "#d5dfe8"),
     "bone": ("Кость", "Bone", "#efe6cf"),
     "tusq": ("TUSQ", "TUSQ", "#f1eee6"),
     "graphite": ("Графит", "Graphite", "#47484c"),
     "brass": ("Латунь", "Brass", "#cba355"),
-    "copper": ("Медь (редкий вариант)", "Copper (uncommon)", "#b97857"),
+    "copper": ("Медь", "Copper", "#b97857"),
 }
-# Realistic fret crown widths, not tang widths, in millimetres (Jescar).
-FRET_CROWNS_MM = (2.03, 2.28, 2.41, 2.54, 2.79, 2.99)
+# Fret crown widths (not tang widths): standard profiles plus Sintoms 4.3 mm.
+FRET_CROWNS_MM = (2.03, 2.28, 2.41, 2.54, 2.79, 2.99, 4.3)
 FRET_MATERIALS = {
     "nickel_silver": ("Нейзильбер", "Nickel silver", "#b7babd"),
     "stainless": ("Нержавеющая сталь", "Stainless steel", "#dce5ed"),
@@ -84,13 +84,18 @@ def string_widths(gauge_set: str) -> tuple[float, ...]:
 
 
 def nut_width_px(thickness_mm: float) -> float:
-    """Visual millimetres to pixels: 3–6 mm becomes 4–8 px, no fret shift."""
-    return max(4.0, min(8.0, float(thickness_mm) * (4.0 / 3.0)))
+    """Visual width for 3–8 mm nuts: 4–10.67 px without fret re-spacing."""
+    return round(max(4.0, min(32.0 / 3.0, float(thickness_mm) * (4.0 / 3.0))), 2)
 
 
 def fret_width_px(crown_mm: float) -> float:
-    """Fret crown options 2.03–2.99 mm become distinct canvas widths."""
-    return round(max(2.0, min(4.8, 2 + (float(crown_mm) - 2.0) * 2.8)), 2)
+    """Render the full 4.3 mm Sintoms crown visibly wider than 2.99 mm."""
+    return round(max(2.0, min(8.5, 2 + (float(crown_mm) - 2.0) * 2.8)), 2)
+
+
+def fret_crown_label(crown_mm: float) -> str:
+    """Keep the requested trade name only for the largest crown."""
+    return "SINTOMS 4.3mm" if crown_mm == 4.3 else f"{crown_mm:.2f} mm"
 
 
 def material_label(materials: dict, key: str, language: str) -> str:
