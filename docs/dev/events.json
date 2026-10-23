@@ -1813,6 +1813,21 @@
       "action": "github.commit",
       "status": "success",
       "detail": "Atomic docs(sync) publication on main; runtime and VERSION.json unchanged; tags/releases require user's local gh."
+    },
+    {
+      "id": "VG-20261023-0224",
+      "date": "2026-10-23",
+      "action": "github.fix_release_script",
+      "status": "success",
+      "path": "scripts/release_history.ps1",
+      "detail": "PowerShell 5.1 NativeCommandError on `gh release view` 404 was terminating the release publication. Temporarily set ErrorActionPreference=Continue only for the existence probe, capture exit code and restore preference before gh release create."
+    },
+    {
+      "id": "VG-20261023-0225",
+      "date": "2026-10-23",
+      "action": "github.commit",
+      "status": "success",
+      "detail": "Fix release view error handling on main after v0.5.4 tag; tag not moved; user can run direct gh release create or pull and rerun -PublishRelease. Native Windows invocation still requires local verification."
     }
   ]
 }

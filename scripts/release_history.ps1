@@ -130,8 +130,20 @@ try {
             & git push origin ("refs/tags/{0}" -f $releaseTag)
             Require-Success "Push release tag"
         }
-        & gh release view $releaseTag --repo $repoName 1>$null 2>$null
-        if ($LASTEXITCODE -eq 0) {
+        # Windows PowerShell 5.1 converts native stderr (including gh's
+        # expected 404 "release not found") into a terminating NativeCommandError
+        # when ErrorActionPreference is Stop. Silence only this existence probe.
+        # Restore the fail-fast preference before running the create operation.
+        $oldErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = "Continue"
+            & gh release view $releaseTag --repo $repoName --json tagName *> $null
+            $releaseExists = ($LASTEXITCODE -eq 0)
+        }
+        finally {
+            $ErrorActionPreference = $oldErrorActionPreference
+        }
+        if ($releaseExists) {
             Write-Host "Release $releaseTag already exists; skipping publication without overwriting notes." -ForegroundColor Yellow
         } else {
             & gh release create $releaseTag --repo $repoName --title "vGUITAR Note Trainer $releaseTag" --notes-file "docs/releases/v0.5.4.md" --verify-tag --latest
