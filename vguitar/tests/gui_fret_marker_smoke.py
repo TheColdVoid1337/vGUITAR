@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from vguitar_notes import NoteTrainer, fret_inlay_centers, note_disc_bbox, ROW_H, TOP
+from vguitar_strings import strings_from_count
 
 with tempfile.TemporaryDirectory() as d:
     os.environ['VGUITAR_DATA_DIR'] = d
@@ -18,7 +19,10 @@ with tempfile.TemporaryDirectory() as d:
     app.audio.play=MagicMock(return_value=True)
     root.geometry('1250x720+0+0')
     root.update()
-    app.active_strings=6
+    # The 0.5.4+ selector uses physical strings, not the legacy count alone.
+    app.selected_strings=strings_from_count(6)
+    app.active_strings=len(app.selected_strings)
+    assert len(app._selected_rows()) == 6
     app.active_frets=12
     app.show_map()
     app.start_study()

@@ -46,7 +46,8 @@ with tempfile.TemporaryDirectory() as d:
         if isinstance(widget,ttk.Notebook):tabs.append(widget)
         for child in widget.winfo_children():walk(child)
     walk(win)
-    assert tabs and tabs[0].tabs() and len(tabs[0].tabs())==3
+    assert tabs and len(tabs[0].tabs()) == 4  # Tuning, Audio, Fretboard, Language
+    assert [tabs[0].tab(tab_id, 'text') for tab_id in tabs[0].tabs()] == ['Строй', 'Аудио', 'Гриф', 'Язык']
     tabs[0].select(1);root.update()
     assert win.winfo_height()<=768 and win.winfo_width()<=1024
     win.destroy();root.destroy()

@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from vguitar_notes import NoteTrainer, TUNINGS, CELL_W, ROW_H, TOP, fret_center
 from vguitar_storage import list_runs
+from vguitar_about import app_version
 
 with tempfile.TemporaryDirectory() as config:
     os.environ['VGUITAR_DATA_DIR'] = config
@@ -54,8 +55,10 @@ with tempfile.TemporaryDirectory() as config:
         app.next_question()
     assert app.phase == 'result'
     assert app.current_run is not None
+    assert app.current_run['app_version'] == app_version()  # VERSION.json is canonical
     assert len(app.current_run['questions']) == app.question_count
-    assert len(list_runs()[0]) == 1
+    saved_runs, _ = list_runs()
+    assert len(saved_runs) == 1 and saved_runs[0]['app_version'] == app_version()
     app.export_current()
     assert 'vGUITAR_NOTE_TRAINER_REPORT' in root.clipboard_get()
     app.open_history()
