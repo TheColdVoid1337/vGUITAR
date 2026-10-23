@@ -1801,7 +1801,7 @@ class NoteTrainer:
         return None
 
     def _update_all(self) -> None:
-        self.footer_label.config(text=f"Строй: {self.preset_name}   •   Esc: подготовка   •   ? Справка в меню")
+        self.footer_label.config(text=f"Строй: {self.preset_name}   •   Esc: подготовка   •   ? Справка и о программе")
         self.strings_value.config(text=str(self.active_strings))
         self.string_picker_button.config(text="Выбор…")
         self.frets_value.config(text=str(self.active_frets))
