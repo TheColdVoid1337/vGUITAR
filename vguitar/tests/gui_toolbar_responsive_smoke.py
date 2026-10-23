@@ -34,6 +34,12 @@ with tempfile.TemporaryDirectory() as data_dir:
     root = tk.Tk()
     app = NoteTrainer(root)
     app.audio.play = MagicMock(return_value=True)
+    # Tkinter prints callback exceptions instead of propagating them from
+    # button.invoke(). Collect them so the smoke check fails reliably.
+    callback_errors = []
+    root.report_callback_exception = (
+        lambda kind, exc, trace: callback_errors.append(f"{kind.__name__}: {exc}")
+    )
     try:
         sizes = (
             (1583, 842), (1366, 768), (1280, 720), (1227, 840),
@@ -42,6 +48,30 @@ with tempfile.TemporaryDirectory() as data_dir:
         for width, height in sizes:
             root.geometry(f"{width}x{height}+0+0")
             root.update()
+            # Clicking each mode must not attempt to pack a widget before a
+            # sibling that lives in a different Tk parent frame.
+            for selected_mode in ("scale", "name", "find", "ear", "caged", "forms", "name"):
+                app.mode_buttons[selected_mode].invoke()
+                root.update()
+                if callback_errors:
+                    raise AssertionError(
+                        f"mode {selected_mode}, {width}x{height}: {callback_errors}"
+                    )
+                if app.mode != selected_mode:
+                    raise AssertionError(f"mode button did not switch to {selected_mode}")
+                show_quiz = selected_mode in ("name", "find", "ear")
+                primary_expected = (
+                    [app._counter_boxes["strings"], app.string_picker_button,
+                     app._counter_boxes["frets"]] if show_quiz else []
+                )
+                secondary_expected = (
+                    ([app._counter_boxes["questions"]] if show_quiz else []) +
+                    [app._counter_boxes["study"]]
+                )
+                if app.counter_primary.pack_slaves() != primary_expected:
+                    raise AssertionError(f"wrong primary counter order for {selected_mode}")
+                if app.counter_secondary.pack_slaves() != secondary_expected:
+                    raise AssertionError(f"wrong secondary counter order for {selected_mode}")
             toolbar = app.toolbar
             groups = (app.brand, app.counter_strip, app.mode_strip, app.utility_strip)
             left, top, right, bottom = bounds(toolbar)

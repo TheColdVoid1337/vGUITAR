@@ -1832,16 +1832,28 @@ class NoteTrainer:
         self.frets_value.config(text=str(self.active_frets))
         self.questions_value.config(text=str(self.question_count))
         self.study_value.config(text=str(self.study_seconds))
-        for kind in ("strings","frets","questions"):
-            frame = self._counter_boxes[kind]
-            if self.mode in ("scale", "caged", "forms"):
-                frame.pack_forget()
-            elif not frame.winfo_manager():
-                frame.pack(side="left",before=self._counter_boxes["study"],padx=(0,7))
-        if self.mode in ("scale", "caged", "forms"):
-            self.string_picker_button.pack_forget()
-        elif not self.string_picker_button.winfo_manager():
-            self.string_picker_button.pack(side="left", before=self._counter_boxes["frets"], padx=(0, 7))
+        # Controls were split into two separate parent frames for responsive
+        # layout. Restoring their old positions with pack(before=...) across
+        # parents raises TclError and breaks mode buttons. Rebuild each parent's
+        # children in their original order only when visibility changes.
+        show_quiz_counters = self.mode in ("name", "find", "ear")
+        if getattr(self, "_show_quiz_counters", None) != show_quiz_counters:
+            strings = self._counter_boxes["strings"]
+            frets = self._counter_boxes["frets"]
+            questions = self._counter_boxes["questions"]
+            study = self._counter_boxes["study"]
+            for widget in (strings, self.string_picker_button, frets, questions, study):
+                widget.pack_forget()
+            if show_quiz_counters:
+                strings.pack(side="left", padx=(0, 3))
+                self.string_picker_button.pack(side="left", padx=(0, 4))
+                frets.pack(side="left", padx=(0, 3))
+                questions.pack(side="left", padx=(0, 3))
+            study.pack(side="left", padx=(0, 3))
+            self._show_quiz_counters = show_quiz_counters
+        # A mode or selected-strings change alters the requested toolbar width.
+        # Recompute its grouping without waiting for the main window to resize.
+        self._layout_toolbar(self.root.winfo_width())
         self._update_answer_layout_buttons()
         self.answer_layout_frame.pack_forget()
         self.scale_options.pack_forget()
