@@ -571,17 +571,25 @@ class NoteTrainer:
         self._label(self.brand, "vGUITAR", 14, ACCENT, True).pack(side="left")
         self._label(self.brand, "  NOTES", 9, MUTED, True).pack(side="left")
         self.counter_strip = tk.Frame(toolbar, bg=PANEL)
-        self.strings_value = self._counter(self.counter_strip, "Струны", "strings", 1, 6)
-        self.string_picker_button = self._button(self.counter_strip, "Выбор…", self.open_string_picker, compact=True)
-        self.string_picker_button.pack(side="left", padx=(0, 7))
+        # Keep related counters together; split into two rows only if they
+        # genuinely cannot fit at the current window/font/DPI size.
+        self.counter_primary = tk.Frame(self.counter_strip, bg=PANEL)
+        self.counter_secondary = tk.Frame(self.counter_strip, bg=PANEL)
+        self.counter_primary.pack(side="left")
+        self.counter_secondary.pack(side="left")
+        self.strings_value = self._counter(self.counter_primary, "Струны", "strings", 1, 6)
+        self.string_picker_button = self._button(self.counter_primary, "Выбор…", self.open_string_picker, compact=True)
+        self.string_picker_button.configure(padx=4)
+        self.string_picker_button.pack(side="left", padx=(0, 4))
         Tooltip(self.string_picker_button, "Отметь отдельные струны, например только пятую.")
-        self.frets_value = self._counter(self.counter_strip, "Лады", "frets", 1, 24)
-        self.questions_value = self._counter(self.counter_strip, "Вопросы", "questions", 5, 100, step=5)
-        self.study_value = self._counter(self.counter_strip, "Повтор", "study", 10, 300, step=10)
+        self.frets_value = self._counter(self.counter_primary, "Лады", "frets", 1, 24)
+        self.questions_value = self._counter(self.counter_secondary, "Вопросы", "questions", 5, 100, step=5)
+        self.study_value = self._counter(self.counter_secondary, "Повтор", "study", 10, 300, step=10)
         self.mode_strip = tk.Frame(toolbar, bg=PANEL)
         self.mode_buttons: dict[str, tk.Button] = {}
         for mode, title in (("name", "Назвать"), ("find", "Найти"), ("ear", "На слух"), ("scale", "Гаммы"), ("caged", "CAGED"), ("forms", "Формы")):
             btn = self._button(self.mode_strip, title, lambda m=mode: self.change_mode(m), compact=True)
+            btn.configure(padx=4)
             btn.pack(side="left", padx=(0, 3))
             self.mode_buttons[mode] = btn
             Tooltip(btn, {"name": "Назвать ноту на указанном ладу.",
@@ -592,9 +600,11 @@ class NoteTrainer:
                            "forms": "Power chords, трезвучия и обращения на группах из трёх струн."}[mode])
         self.utility_strip = tk.Frame(toolbar, bg=PANEL)
         self.history_button = self._button(self.utility_strip, "История", self.open_history, compact=True)
-        self.history_button.pack(side="left", padx=(0, 5))
+        self.history_button.configure(padx=4)
+        self.history_button.pack(side="left", padx=(0, 4))
         Tooltip(self.history_button, "Результаты прошлых тестов и экспорт выбранных запусков.")
         self.about_button = self._button(self.utility_strip, "?", lambda: open_about(self.root), compact=True, width=2)
+        self.about_button.configure(padx=3)
         self.about_button.pack(side="left")
         Tooltip(self.about_button, "О программе, разработчике и исходном коде.")
         self._toolbar_layout = None
@@ -760,35 +770,74 @@ class NoteTrainer:
                        padx=(0, 6), pady=(2, 0))
 
     def _layout_toolbar(self, width: int) -> None:
-        # Fully single-row on wide windows; compact 2-3 rows on narrow ones.
-        mode = "wide" if width >= 1430 else "medium" if width >= 980 else "small"
-        if mode == self._toolbar_layout:
+        """Fit the actual controls, rather than using hard-coded breakpoints.
+
+        At a normal desktop width all four groups stay on one row. On narrow
+        windows the controls reflow into two readable rows, and a third row is
+        used only if larger system fonts/DPI make the navigation too wide.
+        No widget gets hidden or clipped to force a particular arrangement.
+        """
+        # Toolbar has an outside 10px margin, 9px inner padding, and a border
+        # on each side. Leave a little breathing room for window decorations.
+        available = max(0, width - 2 * (10 + 9 + 1) - 6)
+        self.toolbar.update_idletasks()
+        primary_width = self.counter_primary.winfo_reqwidth()
+        secondary_width = self.counter_secondary.winfo_reqwidth()
+        stack_counters = primary_width + secondary_width > available
+        orientation = "stacked" if stack_counters else "inline"
+        if orientation != getattr(self, "_counter_orientation", None):
+            self.counter_primary.pack_forget()
+            self.counter_secondary.pack_forget()
+            if stack_counters:
+                self.counter_primary.pack(side="top", anchor="w")
+                self.counter_secondary.pack(side="top", anchor="w", pady=(3, 0))
+            else:
+                self.counter_primary.pack(side="left")
+                self.counter_secondary.pack(side="left")
+            self._counter_orientation = orientation
+            self.counter_strip.update_idletasks()
+
+        brand_width = self.brand.winfo_reqwidth()
+        mode_width = self.mode_strip.winfo_reqwidth()
+        utility_width = self.utility_strip.winfo_reqwidth()
+        counter_width = self.counter_strip.winfo_reqwidth()
+        full_width = brand_width + counter_width + mode_width + utility_width + 3 * 8
+        navigation_width = brand_width + mode_width + utility_width + 2 * 10
+        if full_width <= available:
+            layout = "single"
+        elif navigation_width <= available and counter_width <= available:
+            layout = "double"
+        else:
+            layout = "triple"
+        if (layout, orientation) == self._toolbar_layout:
             return
-        self._toolbar_layout = mode
+        self._toolbar_layout = (layout, orientation)
+
         for widget in (self.brand, self.counter_strip, self.mode_strip, self.utility_strip):
             widget.grid_forget()
         for row in range(3):
-            self.toolbar.grid_rowconfigure(row, weight=0)
+            self.toolbar.grid_rowconfigure(row, weight=0, minsize=0)
         for col in range(4):
-            self.toolbar.grid_columnconfigure(col, weight=0)
-        if mode == "wide":
+            self.toolbar.grid_columnconfigure(col, weight=0, minsize=0)
+
+        if layout == "single":
             self.toolbar.grid_columnconfigure(3, weight=1)
-            self.brand.grid(row=0, column=0, sticky="w", padx=(0, 15))
-            self.counter_strip.grid(row=0, column=1, sticky="w", padx=(0, 12))
-            self.mode_strip.grid(row=0, column=2, sticky="w")
+            self.brand.grid(row=0, column=0, sticky="w", padx=(0, 8))
+            self.counter_strip.grid(row=0, column=1, sticky="w", padx=(0, 8))
+            self.mode_strip.grid(row=0, column=2, sticky="w", padx=(0, 8))
             self.utility_strip.grid(row=0, column=3, sticky="e")
-        elif mode == "medium":
+        elif layout == "double":
             self.toolbar.grid_columnconfigure(1, weight=1)
             self.brand.grid(row=0, column=0, sticky="w")
-            self.mode_strip.grid(row=0, column=1, sticky="e", padx=(10, 8))
+            self.mode_strip.grid(row=0, column=1, sticky="w", padx=(10, 10))
             self.utility_strip.grid(row=0, column=2, sticky="e")
-            self.counter_strip.grid(row=1, column=0, columnspan=3, sticky="w", pady=(3, 0))
+            self.counter_strip.grid(row=1, column=0, columnspan=3, sticky="w", pady=(4, 0))
         else:
             self.toolbar.grid_columnconfigure(1, weight=1)
             self.brand.grid(row=0, column=0, sticky="w")
-            self.mode_strip.grid(row=1, column=0, columnspan=3, sticky="w")
-            self.utility_strip.grid(row=0, column=2, sticky="e", padx=(6, 0))
-            self.counter_strip.grid(row=2, column=0, columnspan=3, sticky="w", pady=(3, 0))
+            self.utility_strip.grid(row=0, column=1, sticky="e")
+            self.mode_strip.grid(row=1, column=0, columnspan=2, sticky="w", pady=(4, 0))
+            self.counter_strip.grid(row=2, column=0, columnspan=2, sticky="w", pady=(4, 0))
 
     def _layout_content(self) -> None:
         width, height = self.root.winfo_width(), self.root.winfo_height()
@@ -1043,14 +1092,18 @@ class NoteTrainer:
         if not hasattr(self, '_counter_boxes'):
             self._counter_boxes = {}
         self._counter_boxes[kind] = box
-        box.pack(side="left", padx=(0, 7))
+        box.pack(side="left", padx=(0, 3))
         row = tk.Frame(box, bg=PANEL)
         row.pack(anchor="w")
-        self._label(row, label, 9, MUTED).pack(side="left", padx=(0, 3))
-        self._button(row, "−", lambda: self.change_setting(kind, -step), compact=True).pack(side="left")
+        self._label(row, label, 9, MUTED).pack(side="left", padx=(0, 2))
+        minus = self._button(row, "−", lambda: self.change_setting(kind, -step), compact=True)
+        minus.configure(padx=3)
+        minus.pack(side="left")
         value = self._label(row, "", 10, TEXT, True, width=2)
         value.pack(side="left", padx=1)
-        self._button(row, "+", lambda: self.change_setting(kind, step), compact=True).pack(side="left")
+        plus = self._button(row, "+", lambda: self.change_setting(kind, step), compact=True)
+        plus.configure(padx=3)
+        plus.pack(side="left")
         Tooltip(box, {"strings": "Счётчик: 6-я, затем 5-я и так далее. Для одной струны — «Выбор…».",
                       "frets": "Диапазон 0–N, включая открытую струну.",
                       "questions": "Число заданий в одном тесте.",
