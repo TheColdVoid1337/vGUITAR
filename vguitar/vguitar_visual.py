@@ -31,6 +31,7 @@ NUT_MATERIALS = {
     "tusq": ("TUSQ", "TUSQ", "#f1eee6"),
     "graphite": ("Графит", "Graphite", "#47484c"),
     "brass": ("Латунь", "Brass", "#cba355"),
+    "copper": ("Медь (редкий вариант)", "Copper (uncommon)", "#b97857"),
 }
 # Realistic fret crown widths, not tang widths, in millimetres (Jescar).
 FRET_CROWNS_MM = (2.03, 2.28, 2.41, 2.54, 2.79, 2.99)
