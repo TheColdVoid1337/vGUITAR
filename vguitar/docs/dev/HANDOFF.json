@@ -2,7 +2,7 @@
   "format": "vguitar.chat_handoff",
   "schema_version": 1,
   "handoff_date": "2026-10-23",
-  "handoff_status": "complete_context_snapshot; verify live sources on resume",
+  "handoff_status": "v0.5.5 release documentation synced; tag/publication pending independent local release gate",
   "language": "ru",
   "priority": "Continue vGUITAR development in a new ChatGPT conversation without restarting planning or repeating resolved issues.",
   "safety_and_portability": {
@@ -27,14 +27,14 @@
     "audio": "sounddevice / PortAudio, Windows WASAPI where available",
     "version_file": "VERSION.json",
     "current_version": "0.5.5",
-    "current_phase": "alpha, pre-release validation",
+    "current_phase": "alpha; v0.5.5 release documentation prepared, local acceptance and tag/publication pending",
     "latest_published_release": "v0.5.4",
     "latest_release_url": "https://github.com/TheColdVoid1337/vGUITAR/releases/tag/v0.5.4",
     "historical_annotated_tags": 18,
     "target_next_public_release": "v0.5.5",
-    "tag_v0_5_5_state": "not created as of handoff",
-    "github_release_v0_5_5_state": "not created as of handoff",
-    "observed_head_before_handoff": "19c82e96c3514fec51ccb6f8696eefcce753fa71",
+    "tag_v0_5_5_state": "not created as of documentation preparation; verify live GitHub",
+    "github_release_v0_5_5_state": "not published as of documentation preparation; verify live GitHub",
+    "observed_head_before_handoff": "66198f1ce379c2c6104dafdcafdd8a61dca3626a (before docs sync; current HEAD will differ)",
     "git_history_policy": "Never silently rewrite Git history, move tags, force-push, create a release, or increase VERSION.json."
   },
   "repo_structure": {
@@ -80,7 +80,13 @@
     "release_launcher": "vguitar/scripts/RELEASE.bat",
     "screenshot_capture": "vguitar/scripts/capture_screenshot.py",
     "screenshot_publish": "vguitar/scripts/publish_screenshot.ps1",
-    "screenshot_publish_launcher": "vguitar/scripts/PUBLISH_SCREENSHOT.bat"
+    "screenshot_publish_launcher": "vguitar/scripts/PUBLISH_SCREENSHOT.bat",
+    "localization": "vguitar/vguitar_i18n.py",
+    "wood_grain": "vguitar/vguitar_wood.py",
+    "fretboard_hardware": "vguitar/vguitar_visual.py",
+    "english_user_guide": "vguitar/docs/USER_GUIDE.en.md",
+    "release_notes_v0_5_5": "vguitar/docs/releases/v0.5.5.md",
+    "gui_hardware_smoke": "vguitar/tests/gui_fret_hardware_smoke.py"
   },
   "user_data_and_env": {
     "local_storage_root": "vguitar/data/",
@@ -108,10 +114,62 @@
       "CAGED: five major chord shapes and linked major/natural-minor maps",
       "Формы: power chords R-5/R-5-8, major/minor/diminished triads and inversions"
     ],
-    "ui": "Dark navy main window; green vGUITAR text and compact version label; a single mode dropdown; fixed counter groups; right-side settings gear, History, and About (?) button; no duplicate native top menu.",
+    "ui": "One Mode combobox; stable toolbar counters; settings gear; 📖 History; ? About; 4-tab Settings (Tuning, Audio, Fretboard, Language).",
     "about": "Full uncropped bright green rounded-corner icon, dynamic version from VERSION.json, developer profile and repo clickable links, brief help.",
     "window_title": "Shows vGUITAR Note Trainer with current version.",
-    "reporting": "Local JSON session reports, accuracy and response times, history and export; no account required."
+    "reporting": "Local JSON session reports, accuracy/response times, History via book icon and export; no account required.",
+    "localization": "First-run English/Russian selection when preferences do not exist; persist language and switch later in Settings only.",
+    "fretboard_appearance": {
+      "woods": [
+        "Original",
+        "Ebony",
+        "Maple",
+        "Rosewood"
+      ],
+      "wood_texture": "Optional seeded random procedural wood grain; user reroll, persistent seed; disabled for Original",
+      "string_sets": [
+        "8-38",
+        "9-42",
+        "9-46",
+        "10-46",
+        "10-52",
+        "11-48",
+        "12-56"
+      ],
+      "string_materials": [
+        "nickel plated steel",
+        "pure nickel",
+        "stainless steel",
+        "cobalt alloy"
+      ],
+      "nut_thickness_mm": "3.0 through 8.0 in 0.5 mm steps",
+      "nut_materials": [
+        "plastic",
+        "bone",
+        "TUSQ",
+        "graphite",
+        "brass",
+        "copper"
+      ],
+      "fret_crown_mm": [
+        2.03,
+        2.28,
+        2.41,
+        2.54,
+        2.79,
+        2.99,
+        4.3
+      ],
+      "fret_4_3_label": "SINTOMS 4.3mm",
+      "fret_materials": [
+        "nickel silver",
+        "stainless steel",
+        "EVO Gold"
+      ],
+      "inlay_radius_px": "2.5 through 7.5 in 0.5 px steps",
+      "contract": "Visual-only: no changes to audio pitch, MIDI tuning, or hit-test geometry",
+      "legacy_theme_migration": "ash -> maple; mahogany -> rosewood"
+    }
   },
   "work_protocol": {
     "discussion_language": "Russian; user-facing public project README Russian with English alternative.",
@@ -121,8 +179,8 @@
     "events_append_only": "vguitar/docs/dev/events.json is JSON object with .events array. Preserve prior records and append non-identifying event metadata in the same commit.",
     "document_quality": "README targets end users, not chat participant. Avoid personal learning scenarios, AI collaboration notes, tool limitations, internal private paths, passwords, drive IDs, and iOS disclaimers.",
     "code_changes": "Do not silently bump version; use v0.5.5 until user approves release. Preserve historical tags and release v0.5.4.",
-    "validation": "GitHub Actions disabled. Prefer actual tests when environment supports them; be transparent about inability to run Windows GUI tests from a cloud container. Require user's Windows acceptance before tagging/releasing.",
-    "release_workflow": "The existing release_history.ps1/RELEASE.bat is specifically hard-coded to v0.5.4 historical tagging. Do NOT use it to publish v0.5.5 without first deliberately updating or replacing release logic. Release v0.5.5 only on explicit instruction, after tests and release-note sync. Verify gh auth and avoid force tags.",
+    "validation": "GitHub Actions are disabled. Previously shared Windows output: 123/123 unit tests and 8/9 GUI smoke; ninth had brittle ttk state check (later repaired). Current post-last-commit full acceptance is unconfirmed. Do not assert all tests pass until a new local log.",
+    "release_workflow": "Existing RELEASE.bat/release_history.ps1 is v0.5.4-only; do not repurpose silently. After v0.5.5 docs commit and full Windows test acceptance, create annotated v0.5.5 tag on the docs-sync commit and publish GitHub Release from vguitar/docs/releases/v0.5.5.md with git and gh. Existing tags immutable; no force push. Current GitHub connector may not support Release write actions; use authenticated local CLI.",
     "drive_workflow": "Google Drive vGUITAR is a private archive, not the canonical current code. Google Drive folder uses Restricted and Limit access; connector access through owner was verified previously, recheck upon resume. No user data or Drive IDs in GitHub."
   },
   "shell_block_contract": {
@@ -166,14 +224,13 @@
   },
   "verified_current_snapshot": {
     "checked_at_local": "2026-10-23",
-    "github_head_before_handoff": "19c82e96c3514fec51ccb6f8696eefcce753fa71",
+    "github_head_before_handoff": "66198f1ce379c2c6104dafdcafdd8a61dca3626a (pre-docs)",
     "version": "0.5.5 alpha",
     "release_count": 1,
     "released_tags": [
       "v0.5.4"
     ],
     "historical_tag_count": 18,
-    "repository_file_count_before_handoff": 69,
     "real_screenshot_committed": "yes; vguitar/assets/screenshot-main.png exists in current GitHub tree",
     "screenshot_in_both_readmes": "yes; current README.md and README.en.md reference screenshot-main.png",
     "screenshot_fix_history": [
@@ -188,7 +245,9 @@
       "Added bright green rounded icon with transparent corners.",
       "Product-facing bilingual README no longer includes personal context."
     ],
-    "not_verified": "A full Windows test-suite/GUI acceptance pass covering all modes and audio after latest commit has not been conclusively provided. Do not claim it passed."
+    "not_verified": "No complete Windows GUI/unit-suite log after the last option additions (nut 8mm, Sintoms 4.3mm); do not claim release fully validated.",
+    "recent_user_windows_validation": "123/123 unit tests and 8 GUI smoke passes from earlier run; ninth GUI smoke then failed (ttk widget.state string comparison), later corrected. Still awaiting rerun after final commits.",
+    "release_notes_prepared": "vguitar/docs/releases/v0.5.5.md"
   },
   "google_drive": {
     "folder_name": "vGUITAR",
@@ -221,10 +280,10 @@
     "responses": "Direct, technical, nonpatronizing Russian. Show short runnable verification commands and precise results. Always distinguish observed evidence from assumptions."
   },
   "next_steps": {
-    "priority_1": "When user wants to continue: verify live HEAD, VERSION, app screenshot, README links, event journal, and state of release/tag v0.5.5. Do not redo the already published screenshot or the fixed 46x22 issue.",
-    "priority_2": "Run or request Windows validation of all mode selections, gear, History, About links/icon, audio, resized toolbar and GUI smoke. Review test errors before release.",
-    "priority_3": "On explicit #syncdocs or targeted user request prepare v0.5.5 final changelog and release notes; keep content public-facing.",
-    "priority_4": "Only when user explicitly approves, create annotated v0.5.5 tag and GitHub Release with notes. Preserve v0.5.4 and older tags; no force push.",
+    "priority_1": "Verify live main HEAD, docs sync commit, VERSION.json and v0.5.5 tag/release status. Never assume release published.",
+    "priority_2": "Run Windows 123+ unit tests and all relevant GUI smoke scripts after latest source/doc commits; evaluate manual GUI and audio.",
+    "priority_3": "Upon local release-gate pass, create annotated v0.5.5 tag at docs-sync main HEAD, push only that tag and publish GitHub Release notes from vguitar/docs/releases/v0.5.5.md. Preserve older tags.",
+    "priority_4": "After successful release, update handoff/release state in future maintenance without mutating the immutable tag.",
     "freeze": "Do not autonomously increment VERSION, publish v0.5.5, or mutate Google Drive access."
   },
   "boot_procedure": [

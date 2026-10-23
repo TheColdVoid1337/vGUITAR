@@ -4,10 +4,12 @@
 
 - [Главная страница (рус.)](../../README.md)
 - [English README](../../README.en.md)
-- [Полное руководство пользователя](USER_GUIDE.md)
+- [Руководство пользователя (рус.)](USER_GUIDE.md)
+- [User guide (English)](USER_GUIDE.en.md)
 - [История изменений](CHANGELOG.md)
-- [Текст релиза 0.5.4](releases/v0.5.4.md)
-- [Исторические коммиты, теги и локальный скрипт](releases/HISTORY.md)
+- [Примечания к выпуску 0.5.5](releases/v0.5.5.md)
+- [Исторический выпуск 0.5.4](releases/v0.5.4.md)
+- [История версий, тегов и выпусков](releases/HISTORY.md)
 - [Участие в разработке](../../CONTRIBUTING.md)
 
 Исходные модули расположены в `vguitar/`, тесты — в `vguitar/tests/`, ресурсы — в `vguitar/assets/`. Корневой `RUN.bat` запускает приложение. Локальные настройки и история сохраняются в `vguitar/data/` и исключены из Git.

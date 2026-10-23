@@ -15,10 +15,10 @@ Before submitting a pull request, run:
 
 ```powershell
 python -m unittest discover -s vguitar/tests -t vguitar -v
-python -m py_compile vguitar/vguitar_notes.py
+python -m py_compile vguitar/vguitar_notes.py vguitar/vguitar_visual.py vguitar/vguitar_i18n.py vguitar/vguitar_wood.py
 ```
 
-Changes affecting the interface should also be checked manually on Windows. GUI smoke scripts live in `vguitar/tests/gui_*.py` and require a display. GitHub Actions are not configured as a required verification step.
+Changes affecting the interface should also be checked manually on Windows. GUI smoke scripts live in `vguitar/tests/gui_*.py` and require a display. For v0.5.5, run `gui_fret_hardware_smoke.py`, `gui_localization_wood_smoke.py`, `gui_ear_theme_smoke.py`, and `gui_toolbar_responsive_smoke.py` alongside the unit tests. These scenarios use isolated temporary preferences; never commit real session files. GitHub Actions are not configured as a required verification step.
 
 Musical accuracy matters: test pitch classes, string numbering, tunings, interval labels, and playable shape geometry when modifying exercises.
 
@@ -38,5 +38,6 @@ Include a brief description of the behavior change, relevant tests, and screensh
 
 - [User guide](vguitar/docs/USER_GUIDE.md)
 - [Changelog](vguitar/docs/CHANGELOG.md)
+- [v0.5.5 release notes](vguitar/docs/releases/v0.5.5.md)
 - [License](LICENSE)
 - [Security policy](SECURITY.md)
