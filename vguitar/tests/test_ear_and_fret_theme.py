@@ -27,7 +27,7 @@ class GeometryTests(unittest.TestCase):
             self.assertEqual(fret_from_x(OPEN_WIDTH+cw,cw),2)
 
     def test_all_themes_have_valid_distinct_surfaces(self):
-        self.assertEqual(set(FRETBOARD_THEMES), {'default','ebony','ash','mahogany'})
+        self.assertEqual(set(FRETBOARD_THEMES), {'default','ebony','maple','rosewood'})
         self.assertEqual(FRETBOARD_THEMES['default']['neck'], '#163349')
         self.assertEqual(len(set(v['neck'] for v in FRETBOARD_THEMES.values())), 4)
         for theme in FRETBOARD_THEMES.values():
