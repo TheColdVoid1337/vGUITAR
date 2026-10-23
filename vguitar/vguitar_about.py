@@ -36,7 +36,7 @@ def load_icon(master: tk.Misc) -> tk.PhotoImage | None:
 
 def open_about(root: tk.Tk) -> tk.Toplevel:
     window = tk.Toplevel(root)
-    window.title("О программе — vGUITAR")
+    window.title(f"О программе — vGUITAR {app_version()}")
     window.configure(bg=BACKGROUND)
     window.resizable(False, False)
     window.transient(root)
@@ -66,6 +66,18 @@ def open_about(root: tk.Tk) -> tk.Toplevel:
              font=("Segoe UI", 9)).pack()
     link(AUTHOR, AUTHOR_URL)
     link("GitHub · Исходный код проекта", REPOSITORY_URL)
+
+    tk.Frame(panel, bg="#d4e8de", height=1).pack(fill="x", pady=(13, 9))
+    tk.Label(panel, text="Краткая справка", bg=BACKGROUND, fg=TEXT,
+             font=("Segoe UI", 10, "bold")).pack(anchor="w")
+    tk.Label(
+        panel,
+        text=("Выберите режим в верхней панели. Для тренировки нот задайте "
+              "струны, лады и количество вопросов. «Повторение» показывает "
+              "карту нот перед тестом. Результаты доступны в «Истории»."),
+        bg=BACKGROUND, fg=MUTED, font=("Segoe UI", 9),
+        justify="left", wraplength=380,
+    ).pack(anchor="w", pady=(5, 0))
     tk.Button(panel, text="Закрыть", command=window.destroy,
               bg="#d9f4e8", fg=TEXT, relief="flat", cursor="hand2",
               font=("Segoe UI", 10), padx=20, pady=6).pack(pady=(17, 0))

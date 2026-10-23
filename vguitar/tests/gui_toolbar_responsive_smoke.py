@@ -50,28 +50,44 @@ with tempfile.TemporaryDirectory() as data_dir:
             root.update()
             # Clicking each mode must not attempt to pack a widget before a
             # sibling that lives in a different Tk parent frame.
-            for selected_mode in ("scale", "name", "find", "ear", "caged", "forms", "name"):
-                app.mode_buttons[selected_mode].invoke()
+            # Real dropdown selections must not change toolbar group positions.
+            initial_grid = {
+                "brand": app.brand.grid_info(),
+                "mode": app.mode_strip.grid_info(),
+                "controls": app.counter_strip.grid_info(),
+                "utilities": app.utility_strip.grid_info(),
+            }
+            for selected_mode, label in (
+                ("scale", "Гаммы"), ("name", "Назвать"),
+                ("find", "Найти"), ("ear", "На слух"),
+                ("caged", "CAGED"), ("forms", "Формы"),
+                ("name", "Назвать"),
+            ):
+                app.mode_combo.set(label)
+                app.mode_combo.event_generate("<<ComboboxSelected>>")
                 root.update()
                 if callback_errors:
                     raise AssertionError(
                         f"mode {selected_mode}, {width}x{height}: {callback_errors}"
                     )
                 if app.mode != selected_mode:
-                    raise AssertionError(f"mode button did not switch to {selected_mode}")
-                show_quiz = selected_mode in ("name", "find", "ear")
-                primary_expected = (
-                    [app._counter_boxes["strings"], app.string_picker_button,
-                     app._counter_boxes["frets"]] if show_quiz else []
-                )
-                secondary_expected = (
-                    ([app._counter_boxes["questions"]] if show_quiz else []) +
-                    [app._counter_boxes["study"]]
-                )
-                if app.counter_primary.pack_slaves() != primary_expected:
-                    raise AssertionError(f"wrong primary counter order for {selected_mode}")
-                if app.counter_secondary.pack_slaves() != secondary_expected:
-                    raise AssertionError(f"wrong secondary counter order for {selected_mode}")
+                    raise AssertionError(f"mode dropdown did not select {selected_mode}")
+                is_quiz = selected_mode in ("name", "find", "ear")
+                expected = "normal" if is_quiz else "disabled"
+                if app.string_picker_button.cget("state") != expected:
+                    raise AssertionError("incorrect string selector state")
+                if any(button.cget("state") != expected
+                       for kind in ("strings", "frets", "questions")
+                       for button in app._counter_buttons[kind]):
+                    raise AssertionError("incorrect counter state")
+                positions = {
+                    "brand": app.brand.grid_info(),
+                    "mode": app.mode_strip.grid_info(),
+                    "controls": app.counter_strip.grid_info(),
+                    "utilities": app.utility_strip.grid_info(),
+                }
+                if any(positions[k] != initial_grid[k] for k in positions):
+                    raise AssertionError(f"toolbar moved after selecting {selected_mode}")
             toolbar = app.toolbar
             groups = (app.brand, app.counter_strip, app.mode_strip, app.utility_strip)
             left, top, right, bottom = bounds(toolbar)
@@ -86,12 +102,12 @@ with tempfile.TemporaryDirectory() as data_dir:
                 for other in groups[i+1:]:
                     if overlaps(group, other):
                         errors.append(f"overlap: {group} / {other}")
-            for button in (*app.mode_buttons.values(), app.history_button,
+            for button in (app.settings_button, app.history_button,
                            app.about_button, app.string_picker_button):
                 x1, y1, x2, y2 = bounds(button)
                 if not (left <= x1 < x2 <= right and top <= y1 < y2 <= bottom):
                     errors.append(f"button clipped: {button.cget('text')}")
-            mode = app._toolbar_layout[0]
+            mode = app._toolbar_layout
             full_requested = (
                 app.brand.winfo_reqwidth() +
                 app.counter_strip.winfo_reqwidth() +
