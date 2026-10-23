@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tkinter as tk
 import webbrowser
+from vguitar_i18n import get_language, tr
 
 AUTHOR = "TheColdVoid1337"
 AUTHOR_URL = "https://github.com/TheColdVoid1337"
@@ -36,7 +37,7 @@ def load_icon(master: tk.Misc) -> tk.PhotoImage | None:
 
 def open_about(root: tk.Tk) -> tk.Toplevel:
     window = tk.Toplevel(root)
-    window.title(f"О программе — vGUITAR {app_version()}")
+    window.title(f"{tr('О программе')} — vGUITAR {app_version()}")
     window.configure(bg=BACKGROUND)
     window.resizable(False, False)
     window.transient(root)
@@ -51,9 +52,9 @@ def open_about(root: tk.Tk) -> tk.Toplevel:
 
     tk.Label(panel, text="vGUITAR Note Trainer", bg=BACKGROUND, fg=TEXT,
              font=("Segoe UI", 16, "bold")).pack()
-    tk.Label(panel, text=f"Версия {app_version()} · alpha", bg=BACKGROUND,
+    tk.Label(panel, text=f"{tr('Версия')} {app_version()} · alpha", bg=BACKGROUND,
              fg=MUTED, font=("Segoe UI", 10)).pack(pady=(4, 12))
-    tk.Label(panel, text="Тренажёр гитарного грифа, гамм и аккордов",
+    tk.Label(panel, text=tr("Тренажёр гитарного грифа, гамм и аккордов"),
              bg=BACKGROUND, fg=TEXT, font=("Segoe UI", 10)).pack(pady=(0, 13))
 
     def link(label: str, url: str) -> None:
@@ -62,23 +63,27 @@ def open_about(root: tk.Tk) -> tk.Toplevel:
         widget.pack(pady=3)
         widget.bind("<Button-1>", lambda _event: webbrowser.open_new_tab(url))
 
-    tk.Label(panel, text="Разработчик", bg=BACKGROUND, fg=MUTED,
+    tk.Label(panel, text=tr("Разработчик"), bg=BACKGROUND, fg=MUTED,
              font=("Segoe UI", 9)).pack()
     link(AUTHOR, AUTHOR_URL)
-    link("GitHub · Исходный код проекта", REPOSITORY_URL)
+    link(tr("GitHub · Исходный код проекта"), REPOSITORY_URL)
 
     tk.Frame(panel, bg="#d4e8de", height=1).pack(fill="x", pady=(13, 9))
-    tk.Label(panel, text="Краткая справка", bg=BACKGROUND, fg=TEXT,
+    tk.Label(panel, text=tr("Краткая справка"), bg=BACKGROUND, fg=TEXT,
              font=("Segoe UI", 10, "bold")).pack(anchor="w")
     tk.Label(
         panel,
-        text=("Выберите режим в верхней панели. Для тренировки нот задайте "
+        text=("Choose a mode in the top bar. For note practice, select strings, "
+              "frets, and the number of questions. Study shows the note map "
+              "before the quiz. Your results are available in History."
+              if get_language() == "en" else
+              "Выберите режим в верхней панели. Для тренировки нот задайте "
               "струны, лады и количество вопросов. «Повторение» показывает "
               "карту нот перед тестом. Результаты доступны в «Истории»."),
         bg=BACKGROUND, fg=MUTED, font=("Segoe UI", 9),
         justify="left", wraplength=380,
     ).pack(anchor="w", pady=(5, 0))
-    tk.Button(panel, text="Закрыть", command=window.destroy,
+    tk.Button(panel, text=tr("Закрыть"), command=window.destroy,
               bg="#d9f4e8", fg=TEXT, relief="flat", cursor="hand2",
               font=("Segoe UI", 10), padx=20, pady=6).pack(pady=(17, 0))
 

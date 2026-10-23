@@ -29,6 +29,8 @@ from vguitar_scale_shapes import BOX_SCALES, BOX_NAMES, pentatonic_box, next_box
 from vguitar_scale_patterns import (FINGERING_SCALES, shape_names, shape_family,
                                    scale_fingering, next_shape)
 from vguitar_strings import normalize_selected_strings, rows_for_strings, strings_from_count
+from vguitar_i18n import LocalizedCombobox, LocalizedVar, set_language, tr
+from vguitar_wood import draw_wood_grain
 from vguitar_storage import (
     ensure_dirs, preferences_path, read_preferences, save_preferences,
     save_run, list_runs, run_statistics, export_runs_for_llm,
@@ -140,10 +142,10 @@ OPEN_WIDTH = 52  # narrow open string area, but room for a note badge
 FRET_RATIO = 2 ** (-1 / 12)  # equal-tempered fret spacing toward the bridge
 FRET_MIN_WIDTH = 29  # enough click area at the highest fret
 FRETBOARD_THEMES = {
-    "default": {"name": "Оригинальная", "neck": "#163349", "open": "#101c2a", "inactive": "#0b1929", "wire": "#8497a9", "string": "#b8d4df", "muted": "#506273", "dot": "#f1f5fa", "dot_outline": "#a8b8c9"},
-    "ebony": {"name": "Ebony", "neck": "#1b1a1c", "open": "#101013", "inactive": "#101113", "wire": "#8d8d92", "string": "#c0c4c9", "muted": "#53555a", "dot": "#f6f4ee", "dot_outline": "#77787a"},
-    "ash": {"name": "Светлый ясень", "neck": "#cba876", "open": "#987b58", "inactive": "#766956", "wire": "#62584e", "string": "#413f3a", "muted": "#756d61", "dot": "#fffdf5", "dot_outline": "#584b3a"},
-    "mahogany": {"name": "Махагон", "neck": "#693a2d", "open": "#3d241f", "inactive": "#332520", "wire": "#ac9189", "string": "#f0d7c6", "muted": "#78655e", "dot": "#fff6e6", "dot_outline": "#9e7b6d"},
+    "default": {"name": "Оригинальная", "neck": "#163349", "open": "#101c2a", "inactive": "#0b1929", "wire": "#8497a9", "string": "#b8d4df", "muted": "#506273", "dot": "#f1f5fa", "dot_outline": "#a8b8c9", "grain": ""},
+    "ebony": {"name": "Черное дерево (Ebony)", "neck": "#1b1a1c", "open": "#101013", "inactive": "#101113", "wire": "#8d8d92", "string": "#c0c4c9", "muted": "#53555a", "dot": "#f6f4ee", "dot_outline": "#77787a", "grain": "#625851"},
+    "maple": {"name": "Клён (Maple)", "neck": "#ddc8a4", "open": "#ac906d", "inactive": "#9f8666", "wire": "#736c60", "string": "#53565a", "muted": "#827769", "dot": "#44433d", "dot_outline": "#f7edd3", "grain": "#987348"},
+    "rosewood": {"name": "Палисандр (Rosewood)", "neck": "#53342f", "open": "#30211e", "inactive": "#2b2221", "wire": "#ae9990", "string": "#ded1c7", "muted": "#71625b", "dot": "#f5e8d6", "dot_outline": "#947769", "grain": "#b7775c"},
 }
 EAR_REPLAYS = 3
 TOP = 24
@@ -299,7 +301,7 @@ def blend_hex(foreground: str, background: str, opacity: float) -> str:
 class Tooltip:
     """Compact delayed hover help; never steals focus."""
     def __init__(self, widget: tk.Widget, text: str) -> None:
-        self.widget, self.text = widget, text
+        self.widget, self.text = widget, tr(text)
         self.popup = None
         self.timer = None
         widget.bind("<Enter>", self._schedule, add="+")
@@ -338,7 +340,7 @@ class Tooltip:
 
 
 class NoteTrainer:
-    def __init__(self, root: tk.Tk) -> None:
+    def __init__(self, root: tk.Tk, language: str | None = None) -> None:
         self.root = root
         self.root.title(f"vGUITAR — Note Trainer · v{app_version()}")
         self._window_icon = load_icon(self.root)
@@ -363,6 +365,10 @@ class NoteTrainer:
                 pass
         self.preset_name, self.tuning, initial_volume = read_settings(settings_path())
         preferences = read_preferences()
+        self.language = language if language in ("en", "ru") else preferences.get("language", "ru")
+        if self.language not in ("ru", "en"):
+            self.language = "ru"
+        set_language(self.language)
         lesson = preferences.get("lesson", {})
         if not isinstance(lesson, dict):
             lesson = {}
@@ -383,7 +389,9 @@ class NoteTrainer:
         self.question_count = self._bounded(lesson.get("question_count", 10), 5, 100, 10)
         self.study_seconds = self._bounded(lesson.get("study_seconds", 60), 10, 300, 60)
         self.mode = lesson.get("mode") if lesson.get("mode") in ("name", "find", "ear", "scale", "caged", "forms") else "name"
-        self.fretboard_theme = preferences.get("fretboard_theme", "default")
+        previous_theme = preferences.get("fretboard_theme", "default")
+        self.fretboard_theme = {"ash": "maple", "mahogany": "rosewood"}.get(previous_theme, previous_theme)
+        self.fretboard_texture = bool(preferences.get("fretboard_texture", False))
         if self.fretboard_theme not in FRETBOARD_THEMES:
             self.fretboard_theme = "default"
         self.answer_layout = lesson.get("answer_layout") if lesson.get("answer_layout") in ("rows", "circle") else "rows"
@@ -472,6 +480,8 @@ class NoteTrainer:
                 "tuning_midi": list(self.tuning),
                 "volume": self.audio.volume,
                 "fretboard_theme": self.fretboard_theme,
+                "fretboard_texture": self.fretboard_texture,
+                "language": self.language,
                 "audio": {
                     "output_id": self.audio.output_id,
                     "latency": self.audio.latency,
@@ -526,14 +536,14 @@ class NoteTrainer:
             self.root.update()  # clipboard survives app exit on Windows
             self._set_status("Скопировано! Вставь Ctrl+V в чат.")
         except tk.TclError as exc:
-            messagebox.showerror("Буфер обмена", str(exc), parent=self.root)
+            messagebox.showerror(tr("Буфер обмена"), str(exc), parent=self.root)
 
     def _set_status(self, text: str) -> None:
-        self.status_label.config(text=text)
+        self.status_label.config(text=tr(text))
 
     def _label(self, parent: tk.Widget, text: str, size: int = 11,
                color: str = TEXT, bold: bool = False, **kwargs) -> tk.Label:
-        return tk.Label(parent, text=text, fg=color, bg=kwargs.pop("bg", PANEL),
+        return tk.Label(parent, text=tr(text), fg=color, bg=kwargs.pop("bg", PANEL),
                         font=(FONT, size, "bold" if bold else "normal"), **kwargs)
 
     def _button(self, parent: tk.Widget, text: str, command,
@@ -546,7 +556,7 @@ class NoteTrainer:
                     cursor="hand2", font=(FONT, 9 if compact else 10, "bold"))
         if width is not None:
             opts["width"] = width
-        return tk.Button(parent, text=text, command=command, **opts)
+        return tk.Button(parent, text=tr(text), command=command, **opts)
 
     def _create_layout(self) -> None:
         # A single screen: board and answer area share the available height.
@@ -582,8 +592,8 @@ class NoteTrainer:
                             ("caged", "CAGED"), ("forms", "Формы"))
         self._mode_from_label = {label: key for key, label in self._mode_names}
         self._label(self.mode_strip, "Режим", 9, MUTED).pack(side="left", padx=(0, 4))
-        self.mode_choice = tk.StringVar(master=self.root)
-        self.mode_combo = ttk.Combobox(self.mode_strip, state="readonly",
+        self.mode_choice = LocalizedVar(master=self.root)
+        self.mode_combo = LocalizedCombobox(self.mode_strip, state="readonly",
                                        width=10, textvariable=self.mode_choice,
                                        values=[label for _, label in self._mode_names],
                                        font=(FONT, 9))
@@ -595,7 +605,7 @@ class NoteTrainer:
         self.settings_button.configure(padx=2)
         self.settings_button.pack(side="left", padx=(0, 3))
         Tooltip(self.settings_button, "Настройки: строй, звук и оформление грифа.")
-        self.history_button = self._button(self.utility_strip, "История", self.open_history, compact=True)
+        self.history_button = self._button(self.utility_strip, "📖", self.open_history, compact=True, width=2)
         self.history_button.configure(padx=4)
         self.history_button.pack(side="left", padx=(0, 3))
         Tooltip(self.history_button, "История занятий и экспорт результатов.")
@@ -654,11 +664,11 @@ class NoteTrainer:
             Tooltip(btn, "Расположение нот-ответов. Для режима «Назвать ноту».")
         self.answer_layout_frame = layout_box
         self.scale_options = tk.Frame(quiz_card, bg=PANEL)
-        self.scale_choice = tk.StringVar(value=self.scale_name)
-        self.scale_key_choice = tk.StringVar(value=NOTE_EN[self.scale_key])
-        self.scale_view_choice = tk.StringVar(value={"box":"Аппликатуры", "range":"Участок ладов",
+        self.scale_choice = LocalizedVar(value=self.scale_name)
+        self.scale_key_choice = LocalizedVar(value=NOTE_EN[self.scale_key])
+        self.scale_view_choice = LocalizedVar(value={"box":"Аппликатуры", "range":"Участок ладов",
                                                     "full":"Весь звукоряд"}[self.scale_view])
-        self.scale_position_choice = tk.StringVar()
+        self.scale_position_choice = LocalizedVar()
         self._scale_groups = []
         self._scale_comboboxes = []
         for heading, variable, choices, width in (
@@ -670,15 +680,15 @@ class NoteTrainer:
             group = tk.Frame(self.scale_options, bg=PANEL)
             self._scale_groups.append(group)
             self._label(group, heading, 9, MUTED).pack(anchor="w")
-            combo = ttk.Combobox(group, textvariable=variable, values=choices,
+            combo = LocalizedCombobox(group, textvariable=variable, values=choices,
                                  state="readonly", width=width)
             combo.pack(anchor="w")
             combo.bind("<<ComboboxSelected>>", self._scale_option_changed)
             self._scale_comboboxes.append(combo)
         self._refresh_scale_choices()
         self.caged_options = tk.Frame(quiz_card, bg=PANEL)
-        self.caged_key_choice = tk.StringVar(value=NOTE_EN[self.caged_key])
-        self.caged_form_choice = tk.StringVar(value="Авто" if self.caged_form_mode == "auto" else self.caged_form)
+        self.caged_key_choice = LocalizedVar(value=NOTE_EN[self.caged_key])
+        self.caged_form_choice = LocalizedVar(value="Авто" if self.caged_form_mode == "auto" else self.caged_form)
         self._caged_groups = []
         for col, (heading, variable, values, width) in enumerate((
                 ("Аккорд", self.caged_key_choice, list(NOTE_EN), 6),
@@ -687,27 +697,27 @@ class NoteTrainer:
             group.grid(row=0, column=col, sticky="w", padx=(0, 8))
             self._caged_groups.append(group)
             self._label(group, heading, 9, MUTED).pack(anchor="w")
-            combo = ttk.Combobox(group, textvariable=variable, values=values,
+            combo = LocalizedCombobox(group, textvariable=variable, values=values,
                                  state="readonly", width=width)
             combo.pack(anchor="w")
             combo.bind("<<ComboboxSelected>>", self._caged_option_changed)
-        self.caged_view_choice = tk.StringVar(value={"chord":"Аккорд", "major":"Мажорная гамма",
+        self.caged_view_choice = LocalizedVar(value={"chord":"Аккорд", "major":"Мажорная гамма",
                                                   "minor":"Минорная гамма"}[self.caged_view])
         g = tk.Frame(self.caged_options, bg=PANEL)
         g.grid(row=0, column=2, sticky="w", padx=(0, 8))
         self._label(g, "Вид", 9, MUTED).pack(anchor="w")
-        c = ttk.Combobox(g, textvariable=self.caged_view_choice, state="readonly", width=18,
+        c = LocalizedCombobox(g, textvariable=self.caged_view_choice, state="readonly", width=18,
                          values=["Аккорд", "Мажорная гамма", "Минорная гамма"])
         c.pack(anchor="w")
         c.bind("<<ComboboxSelected>>", self._caged_option_changed)
 
         self.forms_options = tk.Frame(quiz_card, bg=PANEL)
-        self.forms_kind_choice = tk.StringVar(value=self.forms_kind)
-        self.forms_key_choice = tk.StringVar(value=NOTE_EN[self.forms_key])
-        self.forms_quality_choice = tk.StringVar(value=self.forms_voice if self.forms_kind == "Power chord" else self.forms_quality)
-        self.forms_strings_choice = tk.StringVar(value=f"{self.forms_root_string}-я" if self.forms_kind == "Power chord" else self.forms_string_set)
-        self.forms_inv_choice = tk.StringVar(value=TRIAD_INVERSIONS[self.forms_inversion])
-        self.form_label_choice = tk.StringVar(value=self.form_label_view)
+        self.forms_kind_choice = LocalizedVar(value=self.forms_kind)
+        self.forms_key_choice = LocalizedVar(value=NOTE_EN[self.forms_key])
+        self.forms_quality_choice = LocalizedVar(value=self.forms_voice if self.forms_kind == "Power chord" else self.forms_quality)
+        self.forms_strings_choice = LocalizedVar(value=f"{self.forms_root_string}-я" if self.forms_kind == "Power chord" else self.forms_string_set)
+        self.forms_inv_choice = LocalizedVar(value=TRIAD_INVERSIONS[self.forms_inversion])
+        self.form_label_choice = LocalizedVar(value=self.form_label_view)
         self._forms_groups = []
         self._forms_combos = []
         for title,variable,options,cbwidth in (
@@ -720,7 +730,7 @@ class NoteTrainer:
             group = tk.Frame(self.forms_options, bg=PANEL)
             self._forms_groups.append(group)
             self._label(group, title, 9, MUTED).pack(anchor="w")
-            combo = ttk.Combobox(group, textvariable=variable, values=options,
+            combo = LocalizedCombobox(group, textvariable=variable, values=options,
                                  state="readonly", width=cbwidth)
             combo.pack(anchor="w")
             combo.bind("<<ComboboxSelected>>", self._forms_option_changed)
@@ -742,7 +752,7 @@ class NoteTrainer:
         self._layout_content()
         self._layout_scale_options(self.root.winfo_width())
         self._layout_forms_options(self.root.winfo_width(), self.root.winfo_height())
-        self.root.bind("<Configure>", self._resize_main, add="+")
+        self.root.bind("<Configure>", self._resize_main)
 
     def _resize_main(self, event) -> None:
         if event.widget is self.root:
@@ -849,52 +859,108 @@ class NoteTrainer:
             return
         window = tk.Toplevel(self.root, bg=BG)
         self._settings_window = window
-        window.title("vGUITAR — Настройки")
+        window.title("vGUITAR — " + tr("Настройки"))
         sw, sh = window.winfo_screenwidth(), window.winfo_screenheight()
         window.geometry(f"{min(560, sw - 40)}x{min(620, sh - 85)}")
         window.minsize(495, 450)
         window.transient(self.root)
         window.grab_set()
-        frame = tk.Frame(window, bg=PANEL, padx=12, pady=12)
-        frame.pack(fill="both", expand=True, padx=9, pady=9)
-
-        # Two tabs keep the configuration window within laptop screen height.
+        # Notebook is the sole surface: no extra frame-in-frame.
+        frame = tk.Frame(window, bg=BG)
+        frame.pack(fill="both", expand=True, padx=4, pady=4)
         tabs = ttk.Notebook(frame)
         tabs.pack(fill="both", expand=True)
-        tuning_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
-        audio_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
-        fret_tab = tk.Frame(tabs, bg=PANEL, padx=15, pady=12)
-        tabs.add(tuning_tab, text="Строй")
-        tabs.add(audio_tab, text="Аудио")
-        tabs.add(fret_tab, text="Гриф")
-        self._label(fret_tab, "Накладка грифа", 13, TEXT, True).pack(anchor="w")
-        theme_name = {key: p["name"] for key, p in FRETBOARD_THEMES.items()}
-        theme_by_name = {v: k for k, v in theme_name.items()}
-        wood_var = tk.StringVar(value=theme_name[self.fretboard_theme])
-        wood_combo = ttk.Combobox(fret_tab, state="readonly", textvariable=wood_var,
-                                  values=list(theme_by_name), width=24)
-        wood_combo.pack(fill="x", pady=(12, 10))
-        self._label(fret_tab, "Цвета меняют только накладку, не интерфейс теста.", 9, MUTED).pack(anchor="w")
-        swatches = tk.Frame(fret_tab, bg=PANEL)
-        swatches.pack(fill="x", pady=(12, 0))
-        for key, theme in FRETBOARD_THEMES.items():
-            tile = tk.Frame(swatches, bg=theme["neck"], width=90, height=42,
-                            highlightbackground=BORDER, highlightthickness=1)
-            tile.pack(side="left", padx=(0, 7))
-            tile.pack_propagate(False)
-        def preview_wood(event=None):
-            self.fretboard_theme = theme_by_name.get(wood_var.get(), "default")
-            self._draw_board()
-        wood_combo.bind("<<ComboboxSelected>>", preview_wood)
-        original_wood = self.fretboard_theme
+        tuning_tab = tk.Frame(tabs, bg=PANEL, padx=12, pady=10)
+        audio_tab = tk.Frame(tabs, bg=PANEL, padx=12, pady=10)
+        fret_tab = tk.Frame(tabs, bg=PANEL, padx=12, pady=10)
+        language_tab = tk.Frame(tabs, bg=PANEL, padx=12, pady=10)
+        tabs.add(tuning_tab, text=tr("Строй"))
+        tabs.add(audio_tab, text=tr("Аудио"))
+        tabs.add(fret_tab, text=tr("Гриф"))
+        tabs.add(language_tab, text=tr("Язык"))
 
-        chosen_preset = tk.StringVar(value=self.preset_name)
+        language_var = tk.StringVar(value=self.language)
+        self._label(language_tab, "Язык интерфейса", 13, TEXT, True).pack(anchor="w", pady=(0, 12))
+        for code, title in (("en", "ENGLISH"), ("ru", "РУССКИЙ")):
+            tk.Radiobutton(language_tab, text=title, value=code, variable=language_var,
+                           bg=PANEL, fg=TEXT, selectcolor=BUTTON_BG,
+                           activebackground=PANEL, activeforeground=TEXT,
+                           font=(FONT, 11), cursor="hand2").pack(anchor="w", pady=4)
+
+        original_wood = self.fretboard_theme
+        original_texture = self.fretboard_texture
+        wood_texture = tk.BooleanVar(value=self.fretboard_texture)
+        self._label(fret_tab, "Накладка грифа", 13, TEXT, True).pack(anchor="w")
+        self._label(fret_tab, "Цвета меняют только накладку, не интерфейс теста.",
+                    9, MUTED).pack(anchor="w", pady=(4, 8))
+        swatches = tk.Frame(fret_tab, bg=PANEL)
+        swatches.pack(fill="x", pady=(5, 12))
+        previews = {}
+
+        def repaint_previews():
+            for key, (canvas, label) in previews.items():
+                theme = FRETBOARD_THEMES[key]
+                canvas.delete("all")
+                selected = key == self.fretboard_theme
+                canvas.config(highlightbackground=ACCENT if selected else BORDER)
+                label.config(fg=ACCENT if selected else TEXT)
+                canvas.create_rectangle(0, 0, 108, 52, fill=theme["neck"], outline="")
+                if wood_texture.get() and key != "default":
+                    draw_wood_grain(canvas, key, 108, 0, 52, theme["neck"], theme["grain"])
+                for x in (24, 54, 82):
+                    canvas.create_line(x, 2, x, 50, fill=theme["wire"], width=2)
+                for y in (12, 26, 40):
+                    canvas.create_line(2, y, 106, y, fill=theme["string"], width=1)
+                canvas.create_oval(67, 23, 73, 29, fill=theme["dot"], outline=theme["dot_outline"])
+
+        def select_wood(key):
+            self.fretboard_theme = key
+            if key == "default":
+                wood_texture.set(False)
+            self.fretboard_texture = bool(wood_texture.get()) and key != "default"
+            texture_checkbox.configure(state="disabled" if key == "default" else "normal")
+            repaint_previews()
+            self._draw_board()
+
+        for key, theme in FRETBOARD_THEMES.items():
+            card = tk.Frame(swatches, bg=PANEL, width=110)
+            card.pack(side="left", padx=(0, 4), anchor="n")
+            canvas = tk.Canvas(card, width=108, height=52, bg=theme["neck"],
+                               highlightthickness=2, highlightbackground=BORDER,
+                               cursor="hand2")
+            canvas.pack()
+            label = self._label(card, theme["name"], 8, TEXT,
+                                wraplength=108, justify="center")
+            label.pack(fill="x", pady=(4, 0))
+            canvas.bind("<Button-1>", lambda event, name=key: select_wood(name))
+            label.bind("<Button-1>", lambda event, name=key: select_wood(name))
+            previews[key] = (canvas, label)
+
+        def toggle_wood_texture():
+            self.fretboard_texture = wood_texture.get() if self.fretboard_theme != "default" else False
+            repaint_previews()
+            self._draw_board()
+
+        texture_checkbox = tk.Checkbutton(
+            fret_tab, text=tr("Текстура дерева"), variable=wood_texture,
+            command=toggle_wood_texture, bg=PANEL, fg=TEXT,
+            selectcolor=BUTTON_BG, activebackground=PANEL,
+            activeforeground=TEXT, cursor="hand2")
+        texture_checkbox.pack(anchor="w")
+        texture_checkbox.configure(state="disabled" if self.fretboard_theme == "default" else "normal")
+        self._label(fret_tab, "Для оригинальной накладки текстура недоступна.",
+                    9, MUTED).pack(anchor="w", pady=(2, 0))
+        repaint_previews()
+        self._wood_previews = previews
+        self._wood_texture_checkbox = texture_checkbox
+
+        chosen_preset = LocalizedVar(value=self.preset_name)
         self._label(tuning_tab, "Строй", 13, TEXT, True).pack(anchor="w")
-        preset_combo = ttk.Combobox(tuning_tab, state="readonly", textvariable=chosen_preset,
+        preset_combo = LocalizedCombobox(tuning_tab, state="readonly", textvariable=chosen_preset,
                                     values=[*TUNINGS, CUSTOM_TUNING])
         preset_combo.pack(fill="x", pady=(6, 12))
         note_choices = [midi_label(n) for n in range(24, 97)]
-        midi_values = [tk.StringVar(value=midi_label(n)) for n in self.tuning]
+        midi_values = [LocalizedVar(value=midi_label(n)) for n in self.tuning]
         rows = tk.Frame(tuning_tab, bg=PANEL)
         rows.pack(fill="x")
         updating = False
@@ -912,8 +978,9 @@ class NoteTrainer:
         for i, var in enumerate(midi_values):
             line = tk.Frame(rows, bg=PANEL)
             line.pack(fill="x", pady=3)
-            self._label(line, f"{i + 1}-я струна", 10, TEXT, width=12, anchor='w').pack(side="left")
-            combo = ttk.Combobox(line, state='readonly', textvariable=var,
+            self._label(line, f"String {i + 1}" if self.language == "en" else f"{i + 1}-я струна",
+                        10, TEXT, width=12, anchor='w').pack(side="left")
+            combo = LocalizedCombobox(line, state='readonly', textvariable=var,
                                  values=note_choices, width=19)
             combo.pack(side='left', padx=8)
             combo.bind('<<ComboboxSelected>>', note_changed)
@@ -921,8 +988,8 @@ class NoteTrainer:
         self._label(audio_tab, "Аудиоустройство", 13, TEXT, True).pack(anchor="w")
         device_choices: dict[str, str] = {}
         selected_id = self.audio.output_id
-        device_var = tk.StringVar()
-        device_box = ttk.Combobox(audio_tab, textvariable=device_var, state='readonly')
+        device_var = LocalizedVar()
+        device_box = LocalizedCombobox(audio_tab, textvariable=device_var, state='readonly')
         def refresh_outputs() -> None:
             device_choices.clear()
             device_choices['Авто · WASAPI'] = ''
@@ -950,13 +1017,13 @@ class NoteTrainer:
         setting_line.pack(fill='x', pady=(12, 8))
         self._label(setting_line, 'Задержка', 10, MUTED).grid(row=0, column=0, sticky='w')
         self._label(setting_line, 'Буфер', 10, MUTED).grid(row=0, column=1, sticky='w', padx=(14, 0))
-        latency_var = tk.StringVar(value='Надёжная' if self.audio.latency == 'high' else 'Низкая')
-        ttk.Combobox(setting_line, values=['Надёжная', 'Низкая'], state='readonly',
+        latency_var = LocalizedVar(value='Надёжная' if self.audio.latency == 'high' else 'Низкая')
+        LocalizedCombobox(setting_line, values=['Надёжная', 'Низкая'], state='readonly',
                      textvariable=latency_var, width=19).grid(row=1, column=0, sticky='ew', pady=4)
         block_values = {'Авто': 0, '256': 256, '512': 512, '1024': 1024, '2048': 2048}
-        block_var = tk.StringVar(value=next((k for k, v in block_values.items()
+        block_var = LocalizedVar(value=next((k for k, v in block_values.items()
                                              if v == self.audio.blocksize), 'Авто'))
-        ttk.Combobox(setting_line, values=list(block_values), state='readonly',
+        LocalizedCombobox(setting_line, values=list(block_values), state='readonly',
                      textvariable=block_var, width=15).grid(row=1, column=1, sticky='ew', padx=(14, 0), pady=4)
         setting_line.grid_columnconfigure(0, weight=1)
         setting_line.grid_columnconfigure(1, weight=1)
@@ -966,6 +1033,8 @@ class NoteTrainer:
                        activeforeground=TEXT).pack(anchor='w', pady=(4, 3))
         self._label(audio_tab, 'Shared: по умолчанию · Exclusive: устройство занято только vGUITAR',
                     9, MUTED).pack(anchor='w')
+        audio_actions = tk.Frame(audio_tab, bg=PANEL)
+        audio_actions.pack(fill="x", pady=(12, 0))
 
         original = (self.audio.output_id, self.audio.latency, self.audio.blocksize,
                     self.audio.exclusive, self.audio.volume)
@@ -988,6 +1057,7 @@ class NoteTrainer:
                 self._preview_audio(note_choices.index(midi_values[5].get()) + 24, volume.get())
         def restore() -> None:
             self.fretboard_theme = original_wood
+            self.fretboard_texture = original_texture
             self._draw_board()
             ident, latency, buffer, exclusive, old_volume = original
             try:
@@ -1000,7 +1070,9 @@ class NoteTrainer:
         def apply_settings() -> None:
             if not apply_audio():
                 return
-            self.fretboard_theme = theme_by_name.get(wood_var.get(), "default")
+            self.fretboard_texture = bool(wood_texture.get()) and self.fretboard_theme != "default"
+            new_language = language_var.get()
+            language_changed = new_language != self.language
             new_tuning = tuple(note_choices.index(v.get()) + 24 for v in midi_values)
             new_preset = chosen_preset.get()
             try:
@@ -1009,17 +1081,27 @@ class NoteTrainer:
                 self.study_message = f'Не удалось сохранить строй: {exc}'
             changed = new_tuning != self.tuning
             self.preset_name, self.tuning = new_preset, new_tuning
+            if language_changed:
+                self.language = new_language
+                set_language(new_language)
             self._save_preferences()
             if changed:
                 self.show_map('Строй изменён. Изучи обновлённые ноты перед тестом.')
             else:
                 self._update_all()
             window.destroy()
+            if language_changed:
+                self._cancel_study_timer()
+                self._cancel_ear_sound()
+                self.outer.destroy()
+                self.phase = "ready"
+                self._create_layout()
+                self._update_all()
 
         bottom = tk.Frame(frame, bg=PANEL)
         bottom.pack(fill='x', pady=(10, 0))
-        self._button(bottom, '♫ Тест', test_audio, compact=True).pack(side='left')
-        self._button(bottom, 'Лог звука', self._copy_audio_diagnostic, compact=True).pack(side='left', padx=6)
+        self._button(audio_actions, '♫ Тест', test_audio, compact=True).pack(side='left')
+        self._button(audio_actions, 'Лог звука', self._copy_audio_diagnostic, compact=True).pack(side='left', padx=6)
         self._button(bottom, 'Сохранить', apply_settings, primary=True).pack(side='right')
         self._button(bottom, 'Отмена', restore).pack(side='right', padx=7)
         window.protocol('WM_DELETE_WINDOW', restore)
@@ -1033,7 +1115,7 @@ class NoteTrainer:
         started = self.audio.play(midi_note)
         self.audio.volume = previous
         if not started:
-            messagebox.showwarning("Проверка звука", self.audio.diagnostic(), parent=self._settings_window)
+            messagebox.showwarning(tr("Проверка звука"), self.audio.diagnostic(), parent=self._settings_window)
             return
         # The worker may report a native device error after play() returns.
         def report() -> None:
@@ -1044,7 +1126,7 @@ class NoteTrainer:
             lead = ("Плеер сообщил об ошибке. Нажми «Лог звука» и пришли его в чат."
                     if self.audio.last_result == "error"
                     else "Если звук не слышен, проверь микшер Windows и устройство вывода, затем пришли «Лог звука».")
-            messagebox.showinfo("Проверка звука", lead + "\n\n" + status, parent=window)
+            messagebox.showinfo(tr("Проверка звука"), tr(lead) + "\n\n" + status, parent=window)
         self.root.after(2500, report)
 
     def page_scroll(self, units: int) -> None:
@@ -1110,7 +1192,7 @@ class NoteTrainer:
             return
         window = tk.Toplevel(self.root, bg=BG)
         self._string_picker_window = window
-        window.title("vGUITAR — Выбор струн")
+        window.title("vGUITAR — " + tr("Выбор струн"))
         window.resizable(False, False)
         window.transient(self.root)
         panel = tk.Frame(window, bg=PANEL, padx=16, pady=14)
@@ -1125,7 +1207,8 @@ class NoteTrainer:
             var = tk.BooleanVar(master=window, value=number in self.selected_strings)
             variables[number] = var
             tk.Checkbutton(
-                options, text=f"{number}-я · {STRINGS[number-1][1]}",
+                options, text=(f"String {number} · {STRINGS[number-1][1]}" if self.language == "en"
+                               else f"{number}-я · {STRINGS[number-1][1]}"),
                 variable=var, bg=PANEL, fg=TEXT, activebackground=PANEL,
                 activeforeground=TEXT, selectcolor=BG, font=(FONT, 11),
                 bd=0, highlightthickness=0, anchor="w",
@@ -1137,7 +1220,7 @@ class NoteTrainer:
         def apply() -> None:
             chosen = [number for number in (6, 5, 4, 3, 2, 1) if variables[number].get()]
             if not chosen:
-                messagebox.showwarning("Выбор струн", "Нужно выбрать хотя бы одну струну.", parent=window)
+                messagebox.showwarning(tr("Выбор струн"), tr("Нужно выбрать хотя бы одну струну."), parent=window)
                 return
             self.selected_strings = normalize_selected_strings(chosen)
             self.active_strings = len(self.selected_strings)
@@ -1387,7 +1470,7 @@ class NoteTrainer:
         if self.study_left <= 0:
             self.start_quiz()
         else:
-            self.quiz_heading.config(text=f"Повторение · {self.study_left} с")
+            self.quiz_heading.config(text=tr(f"Повторение · {self.study_left} с"))
             self.study_after_id = self.root.after(200, self._study_tick)
 
     def _prefer_flats(self) -> bool:
@@ -1397,10 +1480,10 @@ class NoteTrainer:
         return (NOTE_EN_FLAT if self._prefer_flats() else NOTE_EN)[pc]
 
     def _note_ru(self, pc: int) -> str:
-        return (NOTE_RU_FLAT if self._prefer_flats() else NOTE_RU)[pc]
+        return "" if self.language == "en" else (NOTE_RU_FLAT if self._prefer_flats() else NOTE_RU)[pc]
 
     def _readable_note(self, pc: int) -> str:
-        return readable_note(pc, self._prefer_flats())
+        return self._note_name(pc) if self.language == "en" else readable_note(pc, self._prefer_flats())
 
     def _pitch(self, row: int, fret: int) -> int:
         return pitch_at(self.tuning, row, fret)
@@ -1700,13 +1783,24 @@ class NoteTrainer:
             self._copy_text(export_runs_for_llm([self.current_run]))
 
     def open_help(self) -> None:
-        messagebox.showinfo("Как пользоваться", "1. Выбери струны, лады и длительность повторения.\n"
-            "2. Нажми «Повторение» — ноты появятся на время.\n"
-            "3. Когда таймер закончится, начнётся тест.\n"
-            "4. Ответь кнопкой или нажатием на гриф.\n"
-            "5. Итог сохраняется локально. Кнопка «Export Results» копирует JSON.\n"
-            "6. Меню «История» позволяет выбрать несколько запусков и копировать их отчёт.\n"
-            "Данные занятий сохраняются локально в vguitar/data/ и исключены из Git.", parent=self.root)
+        if self.language == "en":
+            content = ("1. Select strings, frets, and study time.\n"
+                       "2. Study displays notes with a countdown.\n"
+                       "3. The quiz begins when the timer ends.\n"
+                       "4. Answer using a button or the fretboard.\n"
+                       "5. Results are saved locally; Export Results copies JSON.\n"
+                       "6. History lets you export multiple sessions.\n"
+                       "Your data stays under vguitar/data/ and is ignored by Git.")
+        else:
+            content = ("1. Выбери струны, лады и длительность повторения.\n"
+                       "2. Нажми «Повторение» — ноты появятся на время.\n"
+                       "3. Когда таймер закончится, начнётся тест.\n"
+                       "4. Ответь кнопкой или нажатием на гриф.\n"
+                       "5. Итог сохраняется локально. Кнопка «Export Results» копирует JSON.\n"
+                       "6. Меню «История» позволяет выбрать несколько запусков и копировать их отчёт.\n"
+                       "Данные занятий сохраняются локально в vguitar/data/ и исключены из Git.")
+        messagebox.showinfo("Help" if self.language == "en" else "Как пользоваться",
+                            content, parent=self.root)
 
     def open_history(self) -> None:
         if getattr(self, "_history_window", None) is not None and self._history_window.winfo_exists():
@@ -1714,7 +1808,7 @@ class NoteTrainer:
             return
         window = tk.Toplevel(self.root, bg=BG)
         self._history_window = window
-        window.title("vGUITAR — История")
+        window.title("vGUITAR — " + tr("История"))
         sw, sh = window.winfo_screenwidth(), window.winfo_screenheight()
         window.geometry(f"{max(650,min(1010,sw-80))}x{max(430,min(620,sh-120))}")
         window.minsize(650, 430)
@@ -1729,6 +1823,7 @@ class NoteTrainer:
         columns = ("date", "mode", "range", "score", "mean", "median", "tuning")
         tree = ttk.Treeview(area, columns=columns, show="headings", selectmode="extended")
         headings = {"date":"Дата UTC", "mode":"Режим", "range":"Область", "score":"Точность", "mean":"Среднее", "median":"Медиана", "tuning":"Строй"}
+        headings = {key: tr(value) for key, value in headings.items()}
         widths = {"date":152, "mode":115, "range":110, "score":95, "mean":94, "median":94, "tuning":235}
         for key in columns:
             tree.heading(key,text=headings[key])
@@ -1749,7 +1844,7 @@ class NoteTrainer:
             indexed[item_id] = run
             tree.insert("", "end", iid=item_id, values=(
                 str(run.get("finished_at", ""))[:19].replace("T", " "),
-                {"name": "Нота", "find": "Найти", "ear": "На слух", "scale":"Гаммы"}.get(cfg.get("mode"), "?"),
+                tr({"name": "Нота", "find": "Найти", "ear": "На слух", "scale":"Гаммы", "caged":"CAGED", "forms":"Формы"}.get(cfg.get("mode"), "?")),
                 (f"{','.join(map(str, cfg['selected_strings']))} стр. / {cfg.get('active_frets','?')} л."
                  if cfg.get("selected_strings") else
                  f"{cfg.get('active_strings','?')} стр. / {cfg.get('active_frets','?')} л."),
@@ -1801,9 +1896,9 @@ class NoteTrainer:
         return None
 
     def _update_all(self) -> None:
-        self.footer_label.config(text=f"Строй: {self.preset_name}   •   Esc: подготовка   •   ? Справка и о программе")
+        self.footer_label.config(text=tr(f"Строй: {self.preset_name}   •   Esc: подготовка   •   ? Справка и о программе"))
         self.strings_value.config(text=str(self.active_strings))
-        self.string_picker_button.config(text="Выбор…")
+        self.string_picker_button.config(text=tr("Выбор…"))
         self.frets_value.config(text=str(self.active_frets))
         self.questions_value.config(text=str(self.question_count))
         self.study_value.config(text=str(self.study_seconds))
@@ -1847,14 +1942,14 @@ class NoteTrainer:
         limit = self._board_frets()
         width = board_width(limit,self.cell_width)
         self.board.configure(scrollregion=(0, 0, width, BOARD_H))
-        self.board_heading.config(text="ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ")
-        self.board_hint.config(text=(
+        self.board_heading.config(text=tr("ПОВТОРЕНИЕ" if self.phase == "study" else "ГРИФ"))
+        self.board_hint.config(text=tr((
             (f"6/6 · {self.scale_name} · {shape_names(self.scale_name)[self.scale_box-1]}" if self.scale_view == "box"
              else f"6/6 · {self.scale_name} · весь гриф" if self.scale_view == "full"
              else f"6/6 · участок {self.scale_position}–{limit}") if self.mode == "scale"
                                      else f"{NOTE_EN[self.caged_key]} · {self.caged_form}-форма · {self.caged_view}" if self.mode == "caged"
                                      else f"{self.forms_kind} · {NOTE_EN[self.forms_key]}" if self.mode == "forms"
-                 else f"Струны {','.join(map(str, self.selected_strings))} · 0–{self.active_frets}"))
+                 else f"Струны {','.join(map(str, self.selected_strings))} · 0–{self.active_frets}")))
         for fret in range(limit + 1):
             self.board.create_text(fret_center(fret,self.cell_width),11,text=str(fret),
                                    fill=TEXT,font=(FONT,13,"bold"),tags=("fret_number",))
@@ -1865,6 +1960,9 @@ class NoteTrainer:
         wood = FRETBOARD_THEMES[self.fretboard_theme]
         self.board.create_rectangle(0, TOP, width, neck_bottom,
                                     fill=wood["neck"], outline='', tags=('fretboard',))
+        if self.fretboard_texture and self.fretboard_theme != "default":
+            draw_wood_grain(self.board, self.fretboard_theme, width, TOP, neck_bottom,
+                            wood["neck"], wood["grain"])
         # The open string is outside the fretted neck, before the real nut.
         self.board.create_rectangle(0, TOP, OPEN_WIDTH - 3, neck_bottom,
                                     fill=wood["open"], outline='', tags=('open_area',))
@@ -1873,7 +1971,8 @@ class NoteTrainer:
             active = self._active(row)
             y0 = TOP + row * ROW_H
             ymid = y0 + ROW_H / 2
-            self.string_labels.create_text(4, ymid, text=f'{self._note_name(pc_open)}  {self._note_ru(pc_open)}  {num}',
+            self.string_labels.create_text(4, ymid, text=(f'{self._note_name(pc_open)}  {num}' if self.language == 'en' else
+                                                         f'{self._note_name(pc_open)}  {self._note_ru(pc_open)}  {num}'),
                                            anchor='w', fill=TEXT if active else FAINT,
                                            font=(FONT, 11, 'bold'),tags=('string_name',))
             if not active:
@@ -2164,7 +2263,7 @@ class NoteTrainer:
         self._clear(self.quiz_body)
         self._clear(self.action_row)
         if self.phase in ("ready", "study"):
-            self.quiz_heading.config(text="Подготовка" if self.phase == "ready" else f"Повторение · {self.study_left} с")
+            self.quiz_heading.config(text=tr("Подготовка" if self.phase == "ready" else f"Повторение · {self.study_left} с"))
             if self.phase == "ready":
                 caption = ("Power chords: корень и квинта; трезвучия: три обращения. Пальцы — подсказка." if self.mode == "forms" else
                            "CAGED: пять семей форм; минорная гамма показывает ♭3, ♭6, ♭7." if self.mode == "caged" else
@@ -2183,8 +2282,9 @@ class NoteTrainer:
         elif self.phase == "quiz":
             q = self._current()
             target = self._pitch_class(q.row,q.fret)
-            string = f"{STRINGS[q.row][0]}-я ({self._note_name(self._pitch_class(q.row,0))})"
-            self.quiz_heading.config(text=f"Вопрос {self.index+1}/{len(self.questions)} · ✓ {self.correct}")
+            string = (f"String {STRINGS[q.row][0]}" if self.language == "en"
+                      else f"{STRINGS[q.row][0]}-я") + f" ({self._note_name(self._pitch_class(q.row,0))})"
+            self.quiz_heading.config(text=tr(f"Вопрос {self.index+1}/{len(self.questions)} · ✓ {self.correct}"))
             if self.mode == "name":
                 where = f"лад {q.fret}" if q.fret else "открытая"
                 self._label(self.quiz_body,f"{string} · {where} — какая нота?",11,TEXT,True).pack(anchor="w")
@@ -2263,7 +2363,7 @@ class NoteTrainer:
                 self._button(self.action_row,"Прервать",self.abort_quiz,compact=True).pack(side="left")
         else:
             total = len(self.questions)
-            self.quiz_heading.config(text=f"Результат · {self.correct}/{total}")
+            self.quiz_heading.config(text=tr(f"Результат · {self.correct}/{total}"))
             if self.current_run:
                 stats=run_statistics(self.current_run)
                 self._label(self.quiz_body,
@@ -2277,13 +2377,49 @@ class NoteTrainer:
             btn=self._button(self.action_row,"Export Results",self.export_current,primary=True,compact=True)
             btn.pack(side="left",padx=(0,6))
             Tooltip(btn,"Скопировать JSON-отчёт теста в буфер обмена.")
-            self._button(self.action_row,"История",self.open_history,compact=True).pack(side="left",padx=(0,6))
+            self._button(self.action_row,"📖",self.open_history,compact=True).pack(side="left",padx=(0,6))
             self._button(self.action_row,"Повторить",self.show_map,compact=True).pack(side="left")
+
+
+def _first_run_language(root: tk.Tk) -> str | None:
+    """Do not create settings until a first-run language was explicitly selected."""
+    root.withdraw()
+    dialog = tk.Toplevel(root, bg=BG)
+    dialog.title("vGUITAR — Language / Язык")
+    dialog.resizable(False, False)
+    dialog.geometry("430x190")
+    choice = {"value": None}
+    tk.Label(dialog, text="Choose language / Выберите язык", bg=BG, fg=TEXT,
+             font=(FONT, 13, "bold")).pack(pady=(25, 20))
+    row = tk.Frame(dialog, bg=BG)
+    row.pack()
+    def choose(value):
+        choice["value"] = value
+        dialog.destroy()
+    for value, caption in (("en", "ENGLISH"), ("ru", "РУССКИЙ")):
+        tk.Button(row, text=caption, command=lambda lang=value: choose(lang),
+                  bg=BUTTON_BG, fg=TEXT, relief="flat", font=(FONT, 11, "bold"),
+                  padx=15, pady=9, cursor="hand2").pack(side="left", padx=10)
+    dialog.protocol("WM_DELETE_WINDOW", lambda: choose(None))
+    dialog.update_idletasks()
+    dialog.deiconify()
+    dialog.wait_visibility()
+    dialog.grab_set()
+    dialog.focus_force()
+    root.wait_window(dialog)
+    root.deiconify()
+    return choice["value"]
 
 
 def main() -> None:
     root = tk.Tk()
-    NoteTrainer(root)
+    language = None
+    if not preferences_path().is_file():
+        language = _first_run_language(root)
+        if language is None:
+            root.destroy()
+            return
+    NoteTrainer(root, language=language)
     root.mainloop()
 
 
