@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import random
 import math
+import secrets
 import time
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -31,6 +32,11 @@ from vguitar_scale_patterns import (FINGERING_SCALES, shape_names, shape_family,
 from vguitar_strings import normalize_selected_strings, rows_for_strings, strings_from_count
 from vguitar_i18n import LocalizedCombobox, LocalizedVar, set_language, tr
 from vguitar_wood import draw_wood_grain
+from vguitar_visual import (
+    STRING_SETS, STRING_MATERIALS, NUT_THICKNESSES_MM, NUT_MATERIALS,
+    FRET_CROWNS_MM, FRET_MATERIALS, clean_visual_settings,
+    string_widths, nut_width_px, fret_width_px, material_label,
+)
 from vguitar_storage import (
     ensure_dirs, preferences_path, read_preferences, save_preferences,
     save_run, list_runs, run_statistics, export_runs_for_llm,
@@ -143,7 +149,7 @@ FRET_RATIO = 2 ** (-1 / 12)  # equal-tempered fret spacing toward the bridge
 FRET_MIN_WIDTH = 29  # enough click area at the highest fret
 FRETBOARD_THEMES = {
     "default": {"name": "Оригинальная", "neck": "#163349", "open": "#101c2a", "inactive": "#0b1929", "wire": "#8497a9", "string": "#b8d4df", "muted": "#506273", "dot": "#f1f5fa", "dot_outline": "#a8b8c9", "grain": ""},
-    "ebony": {"name": "Черное дерево (Ebony)", "neck": "#1b1a1c", "open": "#101013", "inactive": "#101113", "wire": "#8d8d92", "string": "#c0c4c9", "muted": "#53555a", "dot": "#f6f4ee", "dot_outline": "#77787a", "grain": "#625851"},
+    "ebony": {"name": "Черное дерево (Ebony)", "neck": "#1b1a1c", "open": "#101013", "inactive": "#49484d", "wire": "#8d8d92", "string": "#c0c4c9", "muted": "#53555a", "dot": "#f6f4ee", "dot_outline": "#77787a", "grain": "#625851"},
     "maple": {"name": "Клён (Maple)", "neck": "#ddc8a4", "open": "#ac906d", "inactive": "#9f8666", "wire": "#736c60", "string": "#53565a", "muted": "#827769", "dot": "#44433d", "dot_outline": "#f7edd3", "grain": "#987348"},
     "rosewood": {"name": "Палисандр (Rosewood)", "neck": "#53342f", "open": "#30211e", "inactive": "#2b2221", "wire": "#ae9990", "string": "#ded1c7", "muted": "#71625b", "dot": "#f5e8d6", "dot_outline": "#947769", "grain": "#b7775c"},
 }
@@ -392,6 +398,9 @@ class NoteTrainer:
         previous_theme = preferences.get("fretboard_theme", "default")
         self.fretboard_theme = {"ash": "maple", "mahogany": "rosewood"}.get(previous_theme, previous_theme)
         self.fretboard_texture = bool(preferences.get("fretboard_texture", False))
+        saved_seed = preferences.get("fretboard_grain_seed", 0)
+        self.fretboard_grain_seed = saved_seed if type(saved_seed) is int and 0 <= saved_seed < 2**32 else 0
+        self.fretboard_visual = clean_visual_settings(preferences.get("fretboard_visual"))
         if self.fretboard_theme not in FRETBOARD_THEMES:
             self.fretboard_theme = "default"
         self.answer_layout = lesson.get("answer_layout") if lesson.get("answer_layout") in ("rows", "circle") else "rows"
@@ -481,6 +490,8 @@ class NoteTrainer:
                 "volume": self.audio.volume,
                 "fretboard_theme": self.fretboard_theme,
                 "fretboard_texture": self.fretboard_texture,
+                "fretboard_grain_seed": self.fretboard_grain_seed,
+                "fretboard_visual": dict(self.fretboard_visual),
                 "language": self.language,
                 "audio": {
                     "output_id": self.audio.output_id,
@@ -879,6 +890,20 @@ class NoteTrainer:
         tabs.add(fret_tab, text=tr("Гриф"))
         tabs.add(language_tab, text=tr("Язык"))
 
+        # Scrollable, borderless page for small laptop heights.
+        fret_scroll = tk.Canvas(fret_tab, bg=PANEL, highlightthickness=0,
+                                bd=0, relief="flat")
+        fret_bar = ttk.Scrollbar(fret_tab, orient="vertical", command=fret_scroll.yview)
+        fret_scroll.configure(yscrollcommand=fret_bar.set)
+        fret_bar.pack(side="right", fill="y")
+        fret_scroll.pack(side="left", fill="both", expand=True)
+        fret_content = tk.Frame(fret_scroll, bg=PANEL)
+        fret_item = fret_scroll.create_window(0, 0, anchor="nw", window=fret_content)
+        fret_content.bind("<Configure>",
+                          lambda event: fret_scroll.configure(scrollregion=fret_scroll.bbox("all")))
+        fret_scroll.bind("<Configure>",
+                         lambda event: fret_scroll.itemconfigure(fret_item, width=event.width))
+
         language_var = tk.StringVar(value=self.language)
         self._label(language_tab, "Язык интерфейса", 13, TEXT, True).pack(anchor="w", pady=(0, 12))
         for code, title in (("en", "ENGLISH"), ("ru", "РУССКИЙ")):
@@ -889,11 +914,13 @@ class NoteTrainer:
 
         original_wood = self.fretboard_theme
         original_texture = self.fretboard_texture
+        original_grain_seed = self.fretboard_grain_seed
+        original_visual = dict(self.fretboard_visual)
         wood_texture = tk.BooleanVar(value=self.fretboard_texture)
-        self._label(fret_tab, "Накладка грифа", 13, TEXT, True).pack(anchor="w")
-        self._label(fret_tab, "Цвета меняют только накладку, не интерфейс теста.",
+        self._label(fret_content, "Накладка грифа", 13, TEXT, True).pack(anchor="w")
+        self._label(fret_content, "Цвета меняют только накладку, не интерфейс теста.",
                     9, MUTED).pack(anchor="w", pady=(4, 8))
-        swatches = tk.Frame(fret_tab, bg=PANEL)
+        swatches = tk.Frame(fret_content, bg=PANEL)
         swatches.pack(fill="x", pady=(5, 12))
         previews = {}
 
@@ -904,14 +931,15 @@ class NoteTrainer:
                 selected = key == self.fretboard_theme
                 canvas.config(highlightbackground=ACCENT if selected else BORDER)
                 label.config(fg=ACCENT if selected else TEXT)
-                canvas.create_rectangle(0, 0, 108, 52, fill=theme["neck"], outline="")
+                canvas.create_rectangle(0, 0, 96, 52, fill=theme["neck"], outline="")
                 if wood_texture.get() and key != "default":
-                    draw_wood_grain(canvas, key, 108, 0, 52, theme["neck"], theme["grain"])
-                for x in (24, 54, 82):
+                    draw_wood_grain(canvas, key, 96, 0, 52, theme["neck"], theme["grain"],
+                                    seed=self.fretboard_grain_seed)
+                for x in (22, 47, 74):
                     canvas.create_line(x, 2, x, 50, fill=theme["wire"], width=2)
                 for y in (12, 26, 40):
-                    canvas.create_line(2, y, 106, y, fill=theme["string"], width=1)
-                canvas.create_oval(67, 23, 73, 29, fill=theme["dot"], outline=theme["dot_outline"])
+                    canvas.create_line(2, y, 94, y, fill=theme["string"], width=1)
+                canvas.create_oval(57, 23, 63, 29, fill=theme["dot"], outline=theme["dot_outline"])
 
         def select_wood(key):
             self.fretboard_theme = key
@@ -919,18 +947,19 @@ class NoteTrainer:
                 wood_texture.set(False)
             self.fretboard_texture = bool(wood_texture.get()) and key != "default"
             texture_checkbox.configure(state="disabled" if key == "default" else "normal")
+            grain_button.configure(state="normal" if self.fretboard_texture else "disabled")
             repaint_previews()
             self._draw_board()
 
         for key, theme in FRETBOARD_THEMES.items():
-            card = tk.Frame(swatches, bg=PANEL, width=110)
+            card = tk.Frame(swatches, bg=PANEL, width=98)
             card.pack(side="left", padx=(0, 4), anchor="n")
-            canvas = tk.Canvas(card, width=108, height=52, bg=theme["neck"],
+            canvas = tk.Canvas(card, width=96, height=52, bg=theme["neck"],
                                highlightthickness=2, highlightbackground=BORDER,
                                cursor="hand2")
             canvas.pack()
             label = self._label(card, theme["name"], 8, TEXT,
-                                wraplength=108, justify="center")
+                                wraplength=98, justify="center")
             label.pack(fill="x", pady=(4, 0))
             canvas.bind("<Button-1>", lambda event, name=key: select_wood(name))
             label.bind("<Button-1>", lambda event, name=key: select_wood(name))
@@ -938,21 +967,113 @@ class NoteTrainer:
 
         def toggle_wood_texture():
             self.fretboard_texture = wood_texture.get() if self.fretboard_theme != "default" else False
+            grain_button.configure(state="normal" if self.fretboard_texture else "disabled")
+            repaint_previews()
+            self._draw_board()
+
+        def randomize_grain():
+            previous = self.fretboard_grain_seed
+            self.fretboard_grain_seed = secrets.randbits(32)
+            if self.fretboard_grain_seed == previous:
+                self.fretboard_grain_seed ^= 0x9e3779b9
             repaint_previews()
             self._draw_board()
 
         texture_checkbox = tk.Checkbutton(
-            fret_tab, text=tr("Текстура дерева"), variable=wood_texture,
+            fret_content, text=tr("Текстура дерева"), variable=wood_texture,
             command=toggle_wood_texture, bg=PANEL, fg=TEXT,
             selectcolor=BUTTON_BG, activebackground=PANEL,
             activeforeground=TEXT, cursor="hand2")
         texture_checkbox.pack(anchor="w")
         texture_checkbox.configure(state="disabled" if self.fretboard_theme == "default" else "normal")
-        self._label(fret_tab, "Для оригинальной накладки текстура недоступна.",
+        grain_button = self._button(fret_content, "Рандомизировать", randomize_grain,
+                                    compact=True)
+        grain_button.pack(anchor="w", pady=(5, 0))
+        grain_button.configure(state="normal" if self.fretboard_texture and
+                               self.fretboard_theme != "default" else "disabled")
+        self._label(fret_content, "Для оригинальной накладки текстура недоступна.",
                     9, MUTED).pack(anchor="w", pady=(2, 0))
         repaint_previews()
         self._wood_previews = previews
         self._wood_texture_checkbox = texture_checkbox
+        self._wood_grain_shuffle_button = grain_button
+
+        # Hardware presets affect Canvas appearance only, never MIDI pitch.
+        visual_vars = {}
+        visual_options = {}
+        self._fret_visual_controls = {}
+        marker_radius = tk.DoubleVar(value=self.fretboard_visual["inlay_radius"])
+
+        def apply_visual(event=None):
+            updated = {
+                key: options.get(visual_vars[key].get(), self.fretboard_visual[key])
+                for key, options in visual_options.items()
+            }
+            updated["inlay_radius"] = marker_radius.get()
+            self.fretboard_visual = clean_visual_settings(updated)
+            self._draw_board()
+
+        def add_visual_pair(line, column, key, ru_caption, en_caption, option_pairs):
+            cell = tk.Frame(line, bg=PANEL)
+            cell.grid(row=0, column=column, sticky="ew", padx=(0, 7))
+            self._label(cell, en_caption if self.language == "en" else ru_caption,
+                        9, MUTED).pack(anchor="w")
+            lookup = {str(label): value for label, value in option_pairs}
+            if len(lookup) != len(option_pairs):
+                raise ValueError("Duplicate visual option label")
+            visual_options[key] = lookup
+            initial = next(label for label, value in option_pairs
+                           if value == self.fretboard_visual[key])
+            var = tk.StringVar(value=str(initial))
+            visual_vars[key] = var
+            combo = ttk.Combobox(cell, textvariable=var, state="readonly",
+                                 width=20, values=list(lookup))
+            combo.pack(anchor="w", fill="x")
+            combo.bind("<<ComboboxSelected>>", apply_visual)
+            self._fret_visual_controls[key] = combo
+
+        sections = (
+            (("Струны", "Strings"), (
+                ("string_set", "Калибр", "Gauge", [(v, v) for v in STRING_SETS]),
+                ("string_material", "Материал", "Material",
+                 [(material_label(STRING_MATERIALS, k, self.language), k)
+                  for k in STRING_MATERIALS]),
+            )),
+            (("Порожек", "Nut"), (
+                ("nut_mm", "Толщина", "Thickness",
+                 [(f"{v:g} mm", v) for v in NUT_THICKNESSES_MM]),
+                ("nut_material", "Материал", "Material",
+                 [(material_label(NUT_MATERIALS, k, self.language), k)
+                  for k in NUT_MATERIALS]),
+            )),
+            (("Лады", "Frets"), (
+                ("fret_mm", "Ширина коронки", "Crown width",
+                 [(f"{v:.2f} mm", v) for v in FRET_CROWNS_MM]),
+                ("fret_material", "Материал", "Material",
+                 [(material_label(FRET_MATERIALS, k, self.language), k)
+                  for k in FRET_MATERIALS]),
+            )),
+        )
+        for (title_ru, title_en), columns in sections:
+            self._label(fret_content, title_en if self.language == "en" else title_ru,
+                        10, TEXT, True).pack(anchor="w", pady=(9, 3))
+            pair = tk.Frame(fret_content, bg=PANEL)
+            pair.pack(fill="x")
+            pair.grid_columnconfigure(0, weight=1)
+            pair.grid_columnconfigure(1, weight=1)
+            for column, (key, ru_caption, en_caption, options) in enumerate(columns):
+                add_visual_pair(pair, column, key, ru_caption, en_caption, options)
+
+        self._label(fret_content,
+                    "Inlay markers" if self.language == "en" else "Ладовые маркеры",
+                    10, TEXT, True).pack(anchor="w", pady=(9, 1))
+        marker_slider = tk.Scale(fret_content, from_=2.5, to=7.5, resolution=.5,
+                                 orient="horizontal", variable=marker_radius,
+                                 command=apply_visual, bg=PANEL, fg=TEXT,
+                                 troughcolor=CELL_ACTIVE, activebackground=ACCENT,
+                                 highlightthickness=0)
+        marker_slider.pack(fill="x")
+        self._fret_visual_controls["inlay_radius"] = marker_slider
 
         chosen_preset = LocalizedVar(value=self.preset_name)
         self._label(tuning_tab, "Строй", 13, TEXT, True).pack(anchor="w")
@@ -1058,6 +1179,8 @@ class NoteTrainer:
         def restore() -> None:
             self.fretboard_theme = original_wood
             self.fretboard_texture = original_texture
+            self.fretboard_grain_seed = original_grain_seed
+            self.fretboard_visual = dict(original_visual)
             self._draw_board()
             ident, latency, buffer, exclusive, old_volume = original
             try:
@@ -1962,7 +2085,7 @@ class NoteTrainer:
                                     fill=wood["neck"], outline='', tags=('fretboard',))
         if self.fretboard_texture and self.fretboard_theme != "default":
             draw_wood_grain(self.board, self.fretboard_theme, width, TOP, neck_bottom,
-                            wood["neck"], wood["grain"])
+                            wood["neck"], wood["grain"], seed=self.fretboard_grain_seed)
         # The open string is outside the fretted neck, before the real nut.
         self.board.create_rectangle(0, TOP, OPEN_WIDTH - 3, neck_bottom,
                                     fill=wood["open"], outline='', tags=('open_area',))
@@ -2015,15 +2138,21 @@ class NoteTrainer:
                 pass
         # The nut separates fret 0 (open) from fret 1.  Each later fret wire
         # is thinner and does not quite reach the neck's upper/lower edge.
-        self.board.create_rectangle(OPEN_WIDTH - 3, TOP + 2, OPEN_WIDTH + 2,
-                                    neck_bottom - 2, fill='#d5dfe8', outline='', tags=('nut',))
+        nut_thickness = nut_width_px(self.fretboard_visual["nut_mm"])
+        nut_x = OPEN_WIDTH - 0.5
+        self.board.create_rectangle(nut_x - nut_thickness / 2, TOP + 2,
+                                    nut_x + nut_thickness / 2, neck_bottom - 2,
+                                    fill=NUT_MATERIALS[self.fretboard_visual["nut_material"]][2],
+                                    outline='', tags=('nut',))
         for fret in range(2, limit + 1):
             x = fret_start(fret, self.cell_width)
             self.board.create_line(x, TOP + 7, x, neck_bottom - 7,
-                                   fill=wood["wire"], width=3, tags=('fret_wire',))
+                                   fill=FRET_MATERIALS[self.fretboard_visual["fret_material"]][2],
+                                   width=fret_width_px(self.fretboard_visual["fret_mm"]),
+                                   tags=('fret_wire',))
         # Standard guitar position markers: single 3/5/7/9 etc, double 12/24.
         # White markers remain clearly visible even when those strings are grey.
-        dot_radius = min(4.7, ROW_H * .15)
+        dot_radius = self.fretboard_visual["inlay_radius"]
         for fret in range(1, limit + 1):
             for cx, cy in fret_inlay_centers(fret, self.cell_width):
                 self.board.create_oval(cx - dot_radius, cy - dot_radius,
@@ -2032,11 +2161,12 @@ class NoteTrainer:
                                        tags=("fret_inlay", f"fret_inlay_{fret}"))
 
         # Six uninterrupted strings from open-string area to the end of neck.
-        string_widths = (1.15, 1.35, 1.65, 2.0, 2.4, 3.1)
-        for row, thickness in enumerate(string_widths):
+        string_strokes = string_widths(self.fretboard_visual["string_set"])
+        string_color = STRING_MATERIALS[self.fretboard_visual["string_material"]][2]
+        for row, thickness in enumerate(string_strokes):
             y = TOP + row * ROW_H + ROW_H / 2
             self.board.create_line(6, y, width - 6, y, width=thickness,
-                                   fill=wood["string"] if self._active(row) else wood["muted"],
+                                   fill=string_color if self._active(row) else wood["muted"],
                                    capstyle=tk.ROUND, tags=('guitar_string', f'guitar_string_{row + 1}'))
 
         # Foreground: notes and quiz target.  These are true circles, even when

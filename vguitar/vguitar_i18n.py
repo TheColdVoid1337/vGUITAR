@@ -50,6 +50,7 @@ TEXT = {
     "Клён (Maple)": "Maple",
     "Палисандр (Rosewood)": "Rosewood",
     "Текстура дерева": "Wood grain texture",
+    "Рандомизировать": "Randomize grain",
     "Для оригинальной накладки текстура недоступна.": "The original virtual fretboard has no wood texture.",
     "Цвета меняют только накладку, не интерфейс теста.": "Wood selection changes only the fretboard surface.",
     "Громкость": "Volume",
