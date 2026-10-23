@@ -54,7 +54,7 @@ Local settings and training history are stored in `vguitar/data/` and are not co
 
 ## Getting started
 
-1. Select **«Назвать»** (Name), **«Найти»** (Find), or **«На слух»** (Ear).
+1. Use the **«Режим»** (Mode) dropdown to select **«Назвать»** (Name), **«Найти»** (Find), or **«На слух»** (Ear).
 2. Set the strings, fret range, and question count. The **«Выбор…»** selector supports nonconsecutive and individual strings.
 3. Optionally review the fretboard before starting the quiz.
 4. Answer by choosing a note name or selecting a fretboard position.
@@ -62,7 +62,7 @@ Local settings and training history are stored in `vguitar/data/` and are not co
 
 Use **«Гаммы»** (Scales), **«CAGED»**, and **«Формы»** (Shapes) to study musical structures. Each mode provides its own choices for key, pattern, and exercise.
 
-The [user guide](vguitar/docs/USER_GUIDE.md) provides further details about controls, settings, and training modes (currently available in Russian).
+The **⚙** button opens tuning, audio, and appearance settings. **«История»** opens exercise history. The [user guide](vguitar/docs/USER_GUIDE.md) provides further details (currently available in Russian).
 
 ## Documentation
 
@@ -75,7 +75,7 @@ The [user guide](vguitar/docs/USER_GUIDE.md) provides further details about cont
 
 ## About the application
 
-Click the **?** button in the toolbar to see the current version, app icon, [developer profile](https://github.com/TheColdVoid1337), and [project repository](https://github.com/TheColdVoid1337/vGUITAR).
+Click the **?** button in the toolbar to see a brief help section, the current version, app icon, [developer profile](https://github.com/TheColdVoid1337), and [project repository](https://github.com/TheColdVoid1337/vGUITAR).
 
 ## Project status
 
