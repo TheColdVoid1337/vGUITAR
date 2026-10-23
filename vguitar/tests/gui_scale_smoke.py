@@ -24,8 +24,10 @@ with tempfile.TemporaryDirectory() as rootpath:
     assert len(app.board.find_withtag('note_disc'))>0
     assert app._active(0) and app._active(5)
     assert app.scale_options.winfo_manager()=='pack'
-    assert not app._counter_boxes['strings'].winfo_manager()
-    assert len(app.mode_buttons)==6
+    assert all(button.cget('state') == 'disabled' for button in app._counter_buttons['strings'])
+    assert app.string_picker_button.cget('state') == 'disabled'
+    assert app.mode_combo.get() == 'Гаммы'
+    assert len(app.mode_combo['values'])==6
     app.scale_choice.set('Натуральный минор')
     app.scale_key_choice.set('E')
     app.scale_position_choice.set('0')
@@ -64,7 +66,8 @@ with tempfile.TemporaryDirectory() as rootpath:
     assert len({(e['string_number'],e['fret']) for e in runs[0]['questions']}) == expected_count
     app.export_current();assert 'scale_step' in root.clipboard_get()
     app.show_map();app.change_mode('name');root.update()
-    assert app._counter_boxes['strings'].winfo_manager()=='pack'
+    assert all(button.cget('state') == 'normal' for button in app._counter_buttons['strings'])
+    assert app.string_picker_button.cget('state') == 'normal'
     assert not app.scale_options.winfo_manager()
     prefs=read_preferences()['lesson']
     assert prefs['scale_name']=='Натуральный минор'

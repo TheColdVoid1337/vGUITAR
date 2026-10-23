@@ -26,7 +26,9 @@ with tempfile.TemporaryDirectory() as folder:
         assert app.caged_options.winfo_manager() == "pack"
         assert len(app._caged_shape()) >= 4
         assert app.board.find_withtag("note_disc")
-        assert (app.mode_buttons["caged"].winfo_rootx() + app.mode_buttons["caged"].winfo_width()
+        assert app.mode_combo.get() == "CAGED", size
+        assert (root.winfo_rootx() <= app.mode_combo.winfo_rootx()
+                and app.mode_combo.winfo_rootx() + app.mode_combo.winfo_width()
                 <= root.winfo_rootx() + root.winfo_width()), size
     app.caged_form = "E"
     app.caged_key = 7

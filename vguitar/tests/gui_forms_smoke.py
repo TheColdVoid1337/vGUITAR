@@ -20,7 +20,9 @@ with tempfile.TemporaryDirectory() as home:
         root.geometry(size); root.update()
         app.change_mode('forms'); root.update()
         assert app.forms_options.winfo_manager()=='pack'
-        assert app.mode_buttons['forms'].winfo_rootx()+app.mode_buttons['forms'].winfo_width() <= root.winfo_rootx()+root.winfo_width(),size
+        assert app.mode_combo.get() == 'Формы', size
+        assert root.winfo_rootx() <= app.mode_combo.winfo_rootx(), size
+        assert app.mode_combo.winfo_rootx()+app.mode_combo.winfo_width() <= root.winfo_rootx()+root.winfo_width(), size
         assert app._forms_groups[-1].winfo_rootx()+app._forms_groups[-1].winfo_width() <= root.winfo_rootx()+root.winfo_width(),size
     app.forms_kind_choice.set('Power chord')
     app.forms_key_choice.set('G')
