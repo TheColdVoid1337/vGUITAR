@@ -12,7 +12,7 @@ except ImportError:
 
 from vguitar_notes import NoteTrainer, NOTE_EN
 
-OUT=Path(os.getenv('VGUITAR_SCREENSHOTS','/mnt/data/vguitar_previews'))
+OUT=Path(os.getenv('VGUITAR_SCREENSHOTS', str(Path(tempfile.gettempdir()) / 'vguitar_previews')))
 OUT.mkdir(exist_ok=True)
 with tempfile.TemporaryDirectory() as folder:
     os.environ['VGUITAR_DATA_DIR']=folder

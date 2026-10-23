@@ -1,33 +1,42 @@
 # Contributing to vGUITAR
 
-Thank you for helping make guitar practice easier and more accessible.
+Thank you for helping improve guitar fretboard education. Contributions are welcome, including bug reports, guitar-theory corrections, accessible interface improvements, and focused pull requests.
 
-## Scope
+## Development environment
 
-vGUITAR is a small, offline-first guitar-learning project. Prefer focused changes, straightforward Python, clear guitar-theory explanations, and standard-library solutions.
+- Python 3.9 or newer with Tkinter.
+- Windows: launch with `RUN.bat`. For direct development: `python vguitar_notes.py`.
+- Dependencies are listed in `requirements.txt`.
+- Keep changes focused and compatible with the current data format whenever possible.
 
-## Development
+## Validation
 
-1. Use Python 3.9 or newer with Tkinter available.
-2. Launch the application with `python vguitar_notes.py` (Windows: `RUN.bat`).
-3. Run `python -m unittest discover -s tests -v`.
-4. Run `python -m py_compile vguitar_notes.py`.
-5. If you change pitch classes, tuning, or quiz logic, add or update tests.
+Before submitting a pull request, run:
+
+```powershell
+python -m unittest discover -s tests -v
+python -m py_compile vguitar_notes.py
+```
+
+Changes affecting the interface should also be checked manually on Windows. GUI smoke scripts live in `tests/gui_*.py` and require a display. GitHub Actions are not configured as a required verification step.
+
+Musical accuracy matters: test pitch classes, string numbering, tunings, interval labels, and playable shape geometry when modifying exercises.
 
 ## Pull requests
 
-Describe the problem, user-facing behavior, tests run, and screenshots **only when UI changes justify them**. Keep generated ZIP files, screenshots, local environments, and caches out of the repository.
+Include a brief description of the behavior change, relevant tests, and screenshots when visual changes require them. Documentation and release notes should match the behavior actually present in the code. Existing release tags must not be rewritten.
 
-Documentation is **frozen by default**: do not change either README (`README.md`, `README.en.md`), the documented app icon, CONTRIBUTING, SECURITY, code of conduct, or explanatory docs unless the project owner explicitly issues `#syncdocs`. The operational JSON event log under `docs/dev/` is exempt from this freeze and must be updated with **every repository/asset action**.
+## Privacy and repository hygiene
 
-## Asset storage and traceability
+- Do not commit credentials, API keys, access tokens, private URLs, personal file IDs, local machine paths, or account-specific settings.
+- Do not include real user exercise results, screenshots containing personal information, or internal coordination notes in issues, examples, or test fixtures.
+- Keep local environment configuration and generated outputs outside version control. See `.gitignore`.
+- Use sanitized sample data in tests and reports. Release materials should be reproducible from committed sources.
+- The tracked engineering event log (`docs/dev/events.json`) uses non-identifying event metadata only; never add external storage IDs or secret-bearing descriptions to it.
 
-Source code belongs in GitHub. Non-repository release bundles and screenshots belong in the dedicated project Google Drive folder. Before uploading, check its `file_index.json` for the same logical asset or SHA-256. Update the index **in place**, preserving file IDs when replacing an existing asset; do not create duplicate copies by default.
+## Project references
 
-Every GitHub change must be represented in `docs/dev/events.json` as a machine-readable action event. Document synchronization requires an explicit `#syncdocs`.
-
-Historical versions and source commits are documented in [docs/releases/HISTORY.md](docs/releases/HISTORY.md). Windows contributors can use `scripts/release_history.ps1` (or `scripts/RELEASE.bat`) to restore annotated tags locally; `-PushAll -PublishRelease` additionally publishes the tags and the current GitHub Release through an authenticated `gh` CLI. Existing divergent tags must never be force-updated.
-
-## Conduct and security
-
-Follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and [SECURITY.md](SECURITY.md).
+- [User guide](docs/USER_GUIDE.md)
+- [Changelog](docs/CHANGELOG.md)
+- [License](LICENSE)
+- [Security policy](SECURITY.md)

@@ -1,38 +1,40 @@
 <p align="center">
-  <img src="assets/vguitar-icon.svg" width="160" alt="vGUITAR Note Trainer app icon">
+  <img src="assets/vguitar-icon.svg" width="160" alt="vGUITAR Note Trainer logo">
 </p>
 
 <h1 align="center">vGUITAR Note Trainer</h1>
 
-<p align="center"><strong>Offline guitar fretboard, note recognition and fingering trainer for Windows</strong></p>
+<p align="center"><strong>Interactive guitar fretboard trainer for Windows</strong></p>
 
 <p align="center"><a href="README.md">Русский</a> · <strong>English</strong></p>
 
 <p align="center">
-  <a href="docs/releases/v0.5.4.md">v0.5.4 release notes (RU)</a> ·
+  <a href="https://github.com/TheColdVoid1337/vGUITAR/releases">Releases</a> ·
   <a href="docs/USER_GUIDE.md">User guide (RU)</a> ·
-  <a href="https://github.com/TheColdVoid1337/vGUITAR/releases">GitHub releases</a>
+  <a href="docs/CHANGELOG.md">Changelog (RU)</a>
 </p>
 
-**Version 0.5.4 (alpha)** · Python / Tkinter · offline after dependency installation · [MIT](LICENSE)
+**Current version: 0.5.4 (alpha)** · Python 3.9+ / Tkinter · [MIT License](LICENSE)
 
-**vGUITAR** helps guitarists recognize fretboard notes without counting up from open strings, locate chord roots, and connect scale degrees to practical guitar shapes. It is a **Windows desktop app**, not an iPhone app; the icon merely uses a mobile-app-inspired aesthetic.
+**vGUITAR Note Trainer** is a Windows desktop application for learning fretboard notes, intervals, scales, and chord shapes. It combines note-identification, note-location, and ear-training exercises with dedicated practice modes for scales, CAGED, power chords, and triads.
+
+The application runs locally without an account. An internet connection may be needed to install its dependencies for the first time.
 
 ## Features
 
-- **Six lesson modes:** Name, Find, Ear, Scales, CAGED and Shapes (the in-app labels are in Russian).
-- **Select any individual string.** The **«Выбор…»** picker lets you practice just the 5th string or any custom combination; the existing strings counter still enables strings sequentially from the low E.
-- **0–24 fretboard:** realistic fret spacing, note names, landmarks and multiple wood themes.
-- **Seven scales:** major, natural minor, Dorian, Phrygian, major/minor pentatonic, and blues.
-- **Actual fingerings:** seven 3NPS positions for seven-note scales, five boxes for pentatonic/blues scales, plus full-fretboard and fret-range study.
-- **CAGED chord and scale shapes:** five major chord forms with linked major and natural-minor scale maps.
-- **Chord shape trainer:** movable two- and three-note power chords, major/minor/diminished triads, three inversions and four string groups.
-- **Audio feedback:** synthesized plucked notes, ear practice, configurable tunings and Windows audio output.
-- **Local progress:** accuracy, response times, saved session history and machine-readable JSON exports.
+- **Note recognition.** Identify notes from a string/fret position, find notes on the fretboard, or recognize a played note by ear.
+- **Configurable fretboard.** Select individual strings or combinations, practice open strings through fret 24, and choose from multiple fretboard themes.
+- **Scales and fingerings.** Major, natural minor, Dorian, Phrygian, major/minor pentatonic, and blues; seven three-notes-per-string (3NPS) positions for heptatonic scales and five boxes for pentatonic and blues scales.
+- **CAGED.** Five major chord shapes with associated major and natural-minor scale maps.
+- **Chord shapes.** R–5 and R–5–8 power chords; major, minor, and diminished triads with inversions and string-group selection. Shapes can display notes, scale degrees, or suggested fingers.
+- **Audio and tunings.** Synthesized guitar notes, output-device settings, and alternate guitar tunings.
+- **Progress tracking.** Answer accuracy and response times, locally saved exercise history and preferences, and JSON result export.
 
-## Get started
+## Installation
 
-Requires **Windows, Python 3.9+**, Tkinter and audio output.
+**Requirements:** Windows, Python 3.9 or later with Tkinter, and an audio output device.
+
+Clone the repository and start the trainer:
 
 ```powershell
 git clone https://github.com/TheColdVoid1337/vGUITAR.git
@@ -40,52 +42,37 @@ cd vGUITAR
 .\RUN.bat
 ```
 
-`RUN.bat` prepares `.venv` and installs `sounddevice` when necessary. Internet access may be needed for the initial installation; the trainer itself does not require an account or online service.
+Alternatively, [download the source code](https://github.com/TheColdVoid1337/vGUITAR/releases), extract it, and run `RUN.bat`.
 
-### Quick exercises
+On the first launch, the script creates a `.venv` environment and installs packages from `requirements.txt` when needed. This release does not include a prebuilt Windows installer.
 
-**Isolate the A string:** choose **«Назвать»** (Name), click **«Выбор…»**, select only **5-я (A)**, and practice frets 0–7. Switch to **«Найти»** (Find) to train the reverse direction.
+## Getting started
 
-**Memorize chord roots:** select strings 6 and 5, frets 0–7, then practice G5 rooted at low E3 and C5 rooted at A3 using **«Формы»** (Shapes).
+1. Select **«Назвать»** (Name), **«Найти»** (Find), or **«На слух»** (Ear).
+2. Set the strings, fret range, and question count. The **«Выбор…»** selector supports nonconsecutive and individual strings.
+3. Optionally review the fretboard before starting the quiz.
+4. Answer by choosing a note name or selecting a fretboard position.
+5. Open **«История»** (History) to review results or copy a JSON report.
 
-**Play a true pentatonic box:** **«Гаммы» → «Минорная пентатоника» → A → «Аппликатуры» → Box 1**. Unlike a generic fret range, the box contains only its defined shape notes.
+Use **«Гаммы»** (Scales), **«CAGED»**, and **«Формы»** (Shapes) to study musical structures. Each mode provides its own choices for key, pattern, and exercise.
 
-## Training modes
+The [user guide](docs/USER_GUIDE.md) provides further details about controls, settings, and training modes (currently available in Russian).
 
-| In-app button | What it does |
-|---|---|
-| **Назвать** | Name the note shown at a string/fret |
-| **Найти** | Find a requested note on the indicated string |
-| **На слух** | Identify an audible note on the fretboard |
-| **Гаммы** | Study scale positions, intervals and full-scale maps |
-| **CAGED** | Connect chord roots, five shapes and major/minor patterns |
-| **Формы** | Practice power chords, triads, inversions and finger suggestions |
+## Documentation
 
-The timed **«Повторение»** preview can precede a quiz. Press **Space** for the next question after answering, or **Esc** to return to preparation.
+- [User guide (Russian)](docs/USER_GUIDE.md)
+- [Changelog (Russian)](docs/CHANGELOG.md)
+- [v0.5.4 release notes (Russian)](docs/releases/v0.5.4.md)
+- [Version history](docs/releases/HISTORY.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
 
-## Data, tunings and development
+## Project status
 
-Preferences are stored in `settings/` and session results in `results/`, next to the application. Open **«История»** to inspect previous sessions and copy a JSON export containing exact selected strings, scores and individual answer times.
+vGUITAR is in **alpha**. Suggested fingering labels are learning aids rather than mandatory technique. Some conventional scale and chord patterns depend on the string intervals of the selected tuning.
 
-The audio and tuning settings include standard, down-tuned, Drop/Open and custom tunings. Some conventional scale or chord fingering generators require standard relative string intervals; unsupported tuning layouts are not silently presented as canonical shapes.
-
-Run the unit tests locally:
-
-```powershell
-python -m unittest discover -s tests -v
-python -m py_compile vguitar_notes.py
-```
-
-GUI smoke scripts live under `tests/gui_*.py` and require a graphical display or Xvfb. **GitHub Actions are intentionally disabled.** Documentation is gated by `#syncdocs`; the machine-readable change journal lives at `docs/dev/events.json`.
-
-## Documentation and releases
-
-- [Russian user guide](docs/USER_GUIDE.md)
-- [Russian changelog](docs/CHANGELOG.md)
-- [v0.5.4 release notes](docs/releases/v0.5.4.md)
-- [Historical tags and local GitHub release procedure](docs/releases/HISTORY.md)
-- [Русский README](README.md)
+Bugs and feature requests can be submitted through [GitHub Issues](https://github.com/TheColdVoid1337/vGUITAR/issues).
 
 ## License
 
-[MIT License](LICENSE).
+Distributed under the [MIT License](LICENSE).

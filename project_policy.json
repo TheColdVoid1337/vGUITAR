@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project": "vGUITAR",
   "github": {
     "repository": "TheColdVoid1337/vGUITAR",
@@ -7,8 +7,7 @@
     "source_of_truth": true
   },
   "documentation": {
-    "sync_command": "#syncdocs",
-    "frozen_without_command": true,
+    "approval_required": true,
     "protected_paths": [
       "README.md",
       "README.en.md",
@@ -24,25 +23,18 @@
   },
   "event_journal": {
     "path": "docs/dev/events.json",
-    "record_every_action": true,
     "format": "json-object-with-events-array",
-    "events_key": "events"
+    "events_key": "events",
+    "privacy": "public-safe event metadata only; exclude credentials, external storage IDs, local absolute paths and internal conversation details"
   },
   "assets": {
-    "drive_folder_id": "1hQ2WZ39yWISqsk-qJLkn9HwEd0wbFcKZ",
-    "index_filename": "file_index.json",
-    "deduplicate_by": [
-      "logical_id",
-      "sha256"
-    ],
-    "update_index_in_place": true,
-    "store_release_bundles_in_drive": true,
-    "store_screenshots_in_drive": true
+    "committed_public_assets": "assets/",
+    "local_artifacts_ignored": true,
+    "external_storage_configuration": "untracked local settings only"
   },
   "testing": {
     "github_actions_enabled": false,
     "verification": "local",
-    "run_github_actions": false,
     "manual_validation_when_unavailable": true
   }
 }

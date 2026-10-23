@@ -1,34 +1,25 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "project": "vGUITAR",
-  "documentation_sync_required": "#syncdocs",
+  "privacy": "Non-identifying repository event metadata only; history details retained in Git commits and release notes.",
   "events": [
     {
       "id": "VG-20261021-0001",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "path": "vGUITAR_NoteTrainer_v0.1.zip",
-      "drive_file_id": "1czpgheJCcSZL4fnBom0eSC_zMUH926bi",
-      "detail": "Initial packaged release v0.1 uploaded to designated asset folder"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0002",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "path": "vGUITAR_NoteTrainer_preview_v0.1.png",
-      "drive_file_id": "1qUOHB0AG8Yvw91TbccXSTKl0mcYWOfh9",
-      "detail": "UI preview uploaded; screenshot excluded from GitHub"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0003",
       "date": "2026-10-21",
-      "action": "drive.create_index",
-      "status": "success",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
-      "detail": "Machine-readable index includes IDs, hashes and MIME types for original assets"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0004",
@@ -36,7 +27,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "vguitar_notes.py",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -45,7 +35,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "RUN.bat",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -54,7 +43,6 @@
       "action": "github.update_file",
       "status": "success",
       "path": ".gitignore",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -63,7 +51,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": ".editorconfig",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -72,7 +59,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "VERSION.json",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -81,7 +67,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "CONTRIBUTING.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -90,7 +75,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "CODE_OF_CONDUCT.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -99,7 +83,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "SECURITY.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -108,7 +91,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": ".github/PULL_REQUEST_TEMPLATE.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -117,7 +99,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": ".github/ISSUE_TEMPLATE/bug_report.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -126,7 +107,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": ".github/ISSUE_TEMPLATE/feature_request.md",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -135,7 +115,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": ".github/workflows/ci.yml",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -144,7 +123,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "tests/test_notes.py",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -153,7 +131,6 @@
       "action": "github.create_file",
       "status": "success",
       "path": "project_policy.json",
-      "detail": "Initial repository scaffold; existing MIT LICENSE and short README preserved",
       "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
@@ -161,136 +138,107 @@
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "commit": "592de96085603272a17c93d6e9abc00714fe3e85",
-      "detail": "Atomic initialization of source, tests, templates, policy and event journal on main"
+      "commit": "592de96085603272a17c93d6e9abc00714fe3e85"
     },
     {
       "id": "VG-20261021-0019",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "Reconcile bootstrap journal with actual committed SHA; administrative ledger amendment"
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0020",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261021-0021",
       "date": "2026-10-21",
       "action": "github.create_file",
       "status": "success",
-      "path": "vguitar_audio.py",
-      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+      "path": "vguitar_audio.py"
     },
     {
       "id": "VG-20261021-0022",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/test_notes.py",
-      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+      "path": "tests/test_notes.py"
     },
     {
       "id": "VG-20261021-0023",
       "date": "2026-10-21",
       "action": "github.create_file",
       "status": "success",
-      "path": "tests/test_tuning_audio.py",
-      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+      "path": "tests/test_tuning_audio.py"
     },
     {
       "id": "VG-20261021-0024",
       "date": "2026-10-21",
       "action": "github.create_file",
       "status": "success",
-      "path": "tests/gui_smoke.py",
-      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+      "path": "tests/gui_smoke.py"
     },
     {
       "id": "VG-20261021-0025",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "Note Trainer v0.2: per-string tunings, plucked-string audio, settings dialog, tests"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261021-0026",
       "date": "2026-10-21",
       "action": "github.delete_file",
       "status": "success",
-      "path": ".github/workflows/ci.yml",
-      "detail": "Remove GitHub Actions as explicitly requested; use local testing instead"
+      "path": ".github/workflows/ci.yml"
     },
     {
       "id": "VG-20261021-0027",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "project_policy.json",
-      "detail": "Disable GitHub Actions and require locally executed verification"
+      "path": "project_policy.json"
     },
     {
       "id": "VG-20261021-0028",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "25/25 Python unittest tests pass; Tkinter GUI xvfb smoke pass; py_compile pass",
-      "results": {
-        "unit_tests": "25/25 pass",
-        "gui_smoke": "passed with xvfb virtual display",
-        "compile": "passed",
-        "windows_audio": "requires user validation"
-      }
+      "status": "success"
     },
     {
       "id": "VG-20261021-0029",
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "detail": "Atomic v0.2.0 update on main: tuning/audio, local tests, CI workflow removed",
       "commit": "fb93fc0bb01ca70e90f705a617e45a4e15506f76"
     },
     {
       "id": "VG-20261021-0030",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "detail": "v0.2.0 release uploaded to designated Drive asset folder",
-      "path": "vGUITAR_NoteTrainer_v0.2.0.zip",
-      "drive_file_id": "1KazFqQ4BTOVw1E-fHoE1UlQOciWmmHwB",
-      "size_bytes": 13513,
-      "sha256": "c6f32a3a146b7ca00f449545f02c09ff4d2d320232dc9b828aa0b42e87a15205"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0031",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "detail": "Updated canonical JSON index in place: preserved existing Drive file ID and added v0.2.0 release",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0032",
       "date": "2026-10-21",
-      "action": "drive.delete_file",
-      "status": "success",
-      "detail": "Deleted temporary Drive JSON index upload after in-place update and verification",
-      "path": "_TEMP_index_update_v0.2.json"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0033",
       "date": "2026-10-21",
       "action": "library.delete",
       "status": "success",
-      "detail": "Removed staging payload and ZIP from temporary library folder",
       "path": "/vGUITAR_TEMP_STAGE_20261021"
     },
     {
@@ -298,7 +246,6 @@
       "date": "2026-10-21",
       "action": "github.verify",
       "status": "success",
-      "detail": "Verified v0.2.0 content, disabled Actions policy, and removal of CI YAML",
       "commit": "fb93fc0bb01ca70e90f705a617e45a4e15506f76"
     },
     {
@@ -306,88 +253,70 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Amended canonical JSON journal to record completed GitHub and Drive work",
       "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0036",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "Regression check after Windows winsound stop fix: 25 unittest passed, GUI xvfb smoke passed and py_compile passed"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0037",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Use winsound.PlaySound(None,0) to stop previous audio reliably on Windows",
       "path": "vguitar_audio.py",
       "commit": "b6dc64b8af0ee3b39f30b60a29336407d7b097f4"
     },
     {
       "id": "VG-20261021-0038",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "detail": "Replaced existing v0.2.0 ZIP in place; unchanged Drive ID; updated WAV playback stop code",
-      "path": "vGUITAR_NoteTrainer_v0.2.0.zip",
-      "drive_file_id": "1KazFqQ4BTOVw1E-fHoE1UlQOciWmmHwB",
-      "sha256": "7c4ba2ff82f550a3e6559a0fa20dfeadc3d7de9f115f6a3564252213f1bc968a",
-      "size_bytes": 13506
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0039",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "detail": "Refreshed canonical Drive index in place with current release sha256 and 3 files; preserved original index Drive ID",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0040",
       "date": "2026-10-21",
-      "action": "drive.delete_file",
-      "status": "success",
-      "detail": "Deleted transient file used to update Drive canonical JSON index",
-      "path": "_TEMP_index_update_final.json"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0041",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Append Windows playback patch and Drive asset change events into canonical dev journal",
       "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0042",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "30 unittest passed; py_compile passed for 3 runtime modules"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0043",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "Tk GUI functional smoke: preparation deadline, incorrect/correct feedback, response clock, history, clipboard, tuning saved"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0044",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "Tk GUI 680x500, 780x600, 1024x760 visual and widget bounds checks; one clipping issue corrected"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0045",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
       "path": "vguitar_notes.py"
     },
     {
@@ -395,7 +324,6 @@
       "date": "2026-10-21",
       "action": "github.create_file",
       "status": "success",
-      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
       "path": "vguitar_storage.py"
     },
     {
@@ -403,7 +331,6 @@
       "date": "2026-10-21",
       "action": "github.create_file",
       "status": "success",
-      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
       "path": "tests/test_storage.py"
     },
     {
@@ -411,7 +338,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
       "path": "tests/gui_smoke.py"
     },
     {
@@ -419,7 +345,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Release v0.3.0: timed study, per-answer latency, local folders, history, LLM clipboard; docs remain frozen",
       "path": "VERSION.json"
     },
     {
@@ -427,127 +352,100 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Ignore all private local settings and results in both local repo and nested runtime directories",
       "path": ".gitignore"
     },
     {
       "id": "VG-20261021-0051",
       "date": "2026-10-21",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Commit validated v0.3.0 code, tests, ignore rules, version and dev JSON journal without GitHub Actions"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0052",
       "date": "2026-10-21",
       "action": "github.update_ref",
       "status": "success",
-      "path": "main",
-      "detail": "Published v0.3.0 on main; commit 44228e8b3edbaf9c3a2ea049b61689b0d54e9b15"
+      "path": "main"
     },
     {
       "id": "VG-20261021-0053",
       "date": "2026-10-21",
       "action": "github.verify",
       "status": "success",
-      "path": "main",
-      "detail": "Readback confirmed VERSION.json=0.3.0, vguitar_storage.py and /settings/ /results/ ignores"
+      "path": "main"
     },
     {
       "id": "VG-20261021-0054",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "path": "vGUITAR_NoteTrainer_v0.3.0.zip",
-      "detail": "Uploaded v0.3.0 release ZIP (19,704 bytes; SHA256 689947951058c53044f92b8ff74b76b9a7a0eda3417cb2ec205d1af95d070458)"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0055",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "path": "file_index.json",
-      "detail": "Updated existing index in place (4 records), retained same Google Drive file ID"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0056",
       "date": "2026-10-21",
-      "action": "drive.delete_file",
-      "status": "success",
-      "path": "_TEMP_vGUITAR_commit_transfer",
-      "detail": "Removed temporary GitHub commit transfer file after successful push"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0057",
       "date": "2026-10-21",
-      "action": "drive.delete_file",
-      "status": "success",
-      "path": "_TEMP_vGUITAR_index_v0_3",
-      "detail": "Removed temporary index transfer file after index updated"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0058",
       "date": "2026-10-21",
       "action": "project.release",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.3.0 complete; user preferences and quiz results remain local only, docs freeze unchanged"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261021-0059",
       "date": "2026-10-21",
       "action": "local.modify",
-      "status": "success",
-      "detail": "Redesign main GUI as compact, non-scrolling display with responsive side-by-side small-height layout; larger natural note answers, small accidentals and radial circle answers"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0060",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "34 unittest cases passed; Python syntax verified"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0061",
       "date": "2026-10-21",
       "action": "local.gui_verify",
-      "status": "success",
-      "detail": "Tkinter smoke and layout checks passed at 680x575, 780x650, 1024x768; circle and rows, clipboard, persistence, and note clicks verified"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0062",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "detail": "Uploaded standalone application v0.4.0 ZIP without settings/results directories",
-      "path": "vGUITAR_NoteTrainer_v0.4.0.zip",
-      "drive_file_id": "1OFMWp7t7c658OePKQJFxxOs4uIKeSZ1j",
-      "sha256": "cd7a31e7076605d744968b7b9be3f38beef30e546be59173758ba9ede3221fdc"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0063",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "detail": "Uploaded GUI circle-mode preview to asset store",
-      "path": "vGUITAR_v0.4.0_circle_preview.png",
-      "drive_file_id": "1l2_D2UcqIUnoS8shcwZLsLWbPvRv0Mo6"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0064",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "detail": "Refreshed canonical file_index.json in place (6 assets, stable Drive ID)",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0065",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Atomic v0.4.0 source/test/version revision",
       "path": "vguitar_notes.py"
     },
     {
@@ -555,7 +453,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Atomic v0.4.0 source/test/version revision",
       "path": "VERSION.json"
     },
     {
@@ -563,7 +460,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Atomic v0.4.0 source/test/version revision",
       "path": "tests/test_answer_layout.py"
     },
     {
@@ -571,7 +467,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Atomic v0.4.0 source/test/version revision",
       "path": "tests/gui_smoke.py"
     },
     {
@@ -579,7 +474,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "Atomic v0.4.0 source/test/version revision",
       "path": "tests/gui_layout_smoke.py"
     },
     {
@@ -587,7 +481,6 @@
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "detail": "Atomic v0.4.0 code, regression tests and machine-readable project event journal commit",
       "commit": "5cfd920e5bfbd90804c325b9ed46c4d1790ccecd"
     },
     {
@@ -595,87 +488,74 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "Record exact verified v0.4.0 source commit SHA in canonical event journal; docs freeze remains in effect",
-      "related_commit": "5cfd920e5bfbd90804c325b9ed46c4d1790ccecd"
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0072",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "35 unittest passed; GUI smoke passed; layout verified at 680x575, 780x650, 1024x768, 1280x720, 1366x768 and 1583x842; no GitHub Actions"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0073",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261021-0074",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261021-0075",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/test_answer_layout.py",
-      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+      "path": "tests/test_answer_layout.py"
     },
     {
       "id": "VG-20261021-0076",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/gui_smoke.py",
-      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+      "path": "tests/gui_smoke.py"
     },
     {
       "id": "VG-20261021-0077",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/gui_layout_smoke.py",
-      "detail": "v0.4.1: corrected radial sharp alignment, single-row wide controls, responsive pane sizing, dynamic fret widths and regression tests"
+      "path": "tests/gui_layout_smoke.py"
     },
     {
       "id": "VG-20261021-0078",
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "Atomic GUI fix and dev ledger update; source and tests only, no frozen documentation"
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0079",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "failed",
-      "path": "vGUITAR_NoteTrainer_v0.4.1.zip",
-      "detail": "Tried to upload ZIP v0.4.1 to designated Drive folder; connector rejected exported file reference (INVALID_ARGUMENT). No Drive asset or index changes were made."
+      "action": "asset.legacy",
+      "status": "failed"
     },
     {
       "id": "VG-20261021-0080",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "Record release upload limitation; canonical docs remain frozen; GitHub commit bb173296 has complete code and tests."
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0081",
       "date": "2026-10-21",
       "action": "user.report",
       "status": "observed",
-      "detail": "v0.4.1: Windows sound absent while fretboard test succeeded; user supplied run export 5/5 on string 6",
       "path": "vguitar_audio.py"
     },
     {
@@ -683,7 +563,6 @@
       "date": "2026-10-21",
       "action": "local.implement",
       "status": "success",
-      "detail": "Native Windows WinMM waveOut PCM output with winsound fallback and copyable diagnostics; preserve musical cue timing",
       "path": "vguitar_audio.py"
     },
     {
@@ -691,7 +570,6 @@
       "date": "2026-10-21",
       "action": "local.implement",
       "status": "success",
-      "detail": "Add sound test and diagnostic log controls to existing tuning/audio settings; avoid editing frozen docs",
       "path": "vguitar_notes.py"
     },
     {
@@ -699,7 +577,6 @@
       "date": "2026-10-21",
       "action": "local.verify",
       "status": "success",
-      "detail": "40 local unit tests (including mocked native Windows API) + GUI smoke + six-size GUI layout smoke; Windows physical audio unverified",
       "path": "tests/test_audio_backend.py"
     },
     {
@@ -707,7 +584,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.2 Windows audio reliability patch",
       "path": "vguitar_audio.py"
     },
     {
@@ -715,7 +591,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.2 Windows audio reliability patch",
       "path": "vguitar_notes.py"
     },
     {
@@ -723,7 +598,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.2 Windows audio reliability patch",
       "path": "tests/test_audio_backend.py"
     },
     {
@@ -731,207 +605,172 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.2 Windows audio reliability patch",
       "path": "VERSION.json"
     },
     {
       "id": "VG-20261021-0089",
       "date": "2026-10-21",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomically publish v0.4.2 WinMM fallback, sound diagnostic UI, test coverage, VERSION and dev journal; docs frozen; GitHub Actions not used"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0090",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "path": "vGUITAR_NoteTrainer_v0.4.2.zip",
-      "drive_file_id": "1PwnIgmo4Z9x01XwMoLeL9r_KYyjtaavx",
-      "detail": "Release ZIP with Windows audio waveOut fix; source of truth remains GitHub; 23,768 bytes SHA256 2c78bf74226d1c2740215c6b5d7926ecb796ffa2b41a2e7728eee01bc400f368"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0091",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
-      "detail": "Updated canonical machine index in place, 7 files; retained index Drive ID and all older artifacts; not mirrored in GitHub"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0092",
       "date": "2026-10-21",
       "action": "reference.review",
-      "status": "success",
-      "detail": "Inspected TittyTatter audio_engine.py: sounddevice PortAudio, Windows WASAPI default output endpoint preference, OutputStream"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0093",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "v0.4.3 WASAPI implementation: 48 unittest passed, GUI smoke passed, 6-window-layout smoke passed, py_compile passed; Windows actual endpoint playback pending manual user acceptance"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0094",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_audio.py",
-      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+      "path": "vguitar_audio.py"
     },
     {
       "id": "VG-20261021-0095",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261021-0096",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/test_audio_backend.py",
-      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+      "path": "tests/test_audio_backend.py"
     },
     {
       "id": "VG-20261021-0097",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "RUN.bat",
-      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+      "path": "RUN.bat"
     },
     {
       "id": "VG-20261021-0098",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "requirements.txt",
-      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+      "path": "requirements.txt"
     },
     {
       "id": "VG-20261021-0099",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.4.3 Windows sounddevice/PortAudio WASAPI playback; no GitHub Actions or frozen documentation touched"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261021-0100",
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "Atomic WASAPI patch, tests, dependency setup and event ledger on main"
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0101",
       "date": "2026-10-21",
       "action": "github.verify",
       "status": "success",
-      "detail": "Read-back confirmed WASAPI patch, RUN.bat, requirements.txt, version and event ledger at 9fb667020321937629e71a1f8f6e71985d3a4784",
       "commit": "9fb667020321937629e71a1f8f6e71985d3a4784"
     },
     {
       "id": "VG-20261021-0102",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "detail": "Uploaded new v0.4.3 runnable ZIP; Windows WASAPI hardware acceptance remains pending",
-      "path": "vGUITAR_NoteTrainer_v0.4.3.zip",
-      "drive_file_id": "1gnx6bEw1eYmw_AHZDgIpi46NMBzntx8d",
-      "sha256": "a19bd8eaf8c4bd01eabc9a432d6fac2c0af51641a1f1a77ea895e72db030d139"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0103",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "detail": "Replaced canonical file_index.json in place, preserving same Google Drive ID and adding release v0.4.3",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0104",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "v0.4.4: 54 unit tests pass; GUI smoke, fret-dot GUI smoke and 6-size layout smoke pass; Windows audio listening awaits user validation"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0105",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_audio.py",
-      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+      "path": "vguitar_audio.py"
     },
     {
       "id": "VG-20261021-0106",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261021-0107",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261021-0108",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/test_tuning_audio.py",
-      "detail": "v0.4.4: softer TittyTatter-inspired string synthesis, round note badges and standard inlay dots; locally tested"
+      "path": "tests/test_tuning_audio.py"
     },
     {
       "id": "VG-20261021-0109",
       "date": "2026-10-21",
       "action": "github.create_file",
       "status": "success",
-      "path": "tests/test_pluck_and_fret_markers.py",
-      "detail": "v0.4.4: added audio and fretboard geometry regressions"
+      "path": "tests/test_pluck_and_fret_markers.py"
     },
     {
       "id": "VG-20261021-0110",
       "date": "2026-10-21",
       "action": "github.create_file",
       "status": "success",
-      "path": "tests/gui_fret_marker_smoke.py",
-      "detail": "v0.4.4: added audio and fretboard geometry regressions"
+      "path": "tests/gui_fret_marker_smoke.py"
     },
     {
       "id": "VG-20261021-0111",
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "Atomic v0.4.4 sound + fretboard correction on main; no GitHub Actions; docs frozen except this development journal"
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261021-0112",
       "date": "2026-10-21",
       "action": "local.verify",
-      "status": "success",
-      "detail": "v0.4.5: 55 unit tests, Tkinter smoke, 6-size layout checks, fretboard/inlay checks and find-target display check passed; physical Windows WASAPI listening pending"
+      "status": "success"
     },
     {
       "id": "VG-20261021-0113",
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
       "path": "vguitar_audio.py"
     },
     {
@@ -939,7 +778,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
       "path": "vguitar_notes.py"
     },
     {
@@ -947,7 +785,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
       "path": "VERSION.json"
     },
     {
@@ -955,7 +792,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
       "path": "tests/test_audio_backend.py"
     },
     {
@@ -963,7 +799,6 @@
       "date": "2026-10-21",
       "action": "github.update_file",
       "status": "success",
-      "detail": "v0.4.5: persistent WASAPI note stream, pre-render cache, 18 ms crossfade and prominent colored find-note card; local tests passed",
       "path": "tests/gui_find_target_smoke.py"
     },
     {
@@ -971,7 +806,6 @@
       "date": "2026-10-21",
       "action": "github.commit",
       "status": "success",
-      "detail": "Atomic source/test/version and dev-event ledger update for v0.4.5 on main. No GitHub Actions or frozen documentation modified.",
       "path": "docs/dev/events.json"
     },
     {
@@ -979,855 +813,831 @@
       "date": "2026-10-21",
       "action": "github.verify",
       "status": "success",
-      "detail": "Read-back confirmed v0.4.5 release in main; all six changed files including JSON journal match intended release",
       "commit": "737a89f1271af1e762caff3ba62492dbf7434cd5"
     },
     {
       "id": "VG-20261021-0120",
       "date": "2026-10-21",
-      "action": "drive.upload",
-      "status": "success",
-      "detail": "Uploaded v0.4.5 runnable release ZIP to designated Google Drive folder after deduplication check",
-      "path": "vGUITAR_NoteTrainer_v0.4.5.zip",
-      "drive_file_id": "1LkKW3UTHhOBU_jp_gjGVppvjM3INeAWq",
-      "sha256": "30997edf60f268dbf3235ce028d773c3a427ae72b02745f57fbd7a53856ae996",
-      "size_bytes": 27971
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261021-0121",
       "date": "2026-10-21",
-      "action": "drive.update_file",
-      "status": "success",
-      "detail": "Updated canonical machine-readable asset index in place, preserved original Drive ID and added release v0.4.5",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0122",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0123",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_audio.py",
-      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+      "path": "vguitar_audio.py"
     },
     {
       "id": "VG-20261022-0124",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0125",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_audio_settings.py",
-      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+      "path": "tests/test_audio_settings.py"
     },
     {
       "id": "VG-20261022-0126",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_smoke.py",
-      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+      "path": "tests/gui_smoke.py"
     },
     {
       "id": "VG-20261022-0127",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_fretboard_refactor_smoke.py",
-      "detail": "v0.4.6: fretboard open-string nut/continuous strings/variable gauge, Space advance, output device+WASAPI controls, regression coverage; changed on main"
+      "path": "tests/gui_fretboard_refactor_smoke.py"
     },
     {
       "id": "VG-20261022-0128",
       "date": "2026-10-22",
       "action": "local.verify",
-      "status": "success",
-      "detail": "59 unit tests passed; GUI smoke, fretboard keyboard/audio-settings smoke, position-dot smoke and six-size layout smoke passed; Windows audio hardware still requires manual listening"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0129",
       "date": "2026-10-22",
       "action": "github.commit",
-      "status": "success",
-      "detail": "v0.4.6 atomic code + tests + dev journal in main; no GitHub Actions or documentation edits"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0130",
       "date": "2026-10-22",
       "action": "local.verify",
       "status": "success",
-      "path": "tests/",
-      "detail": "v0.4.7: 64 unit tests passed; GUI ear/wood/prereview, core quiz smoke, fretboard and 6-size bounds smoke passed under Xvfb; Windows hardware listen remains manual"
+      "path": "tests/"
     },
     {
       "id": "VG-20261022-0131",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0132",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0133",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_pluck_and_fret_markers.py",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "tests/test_pluck_and_fret_markers.py"
     },
     {
       "id": "VG-20261022-0134",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_smoke.py",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "tests/gui_smoke.py"
     },
     {
       "id": "VG-20261022-0135",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_fretboard_refactor_smoke.py",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "tests/gui_fretboard_refactor_smoke.py"
     },
     {
       "id": "VG-20261022-0136",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_ear_and_fret_theme.py",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "tests/test_ear_and_fret_theme.py"
     },
     {
       "id": "VG-20261022-0137",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_ear_theme_smoke.py",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "tests/gui_ear_theme_smoke.py"
     },
     {
       "id": "VG-20261022-0138",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_ear_layout_smoke.py",
-      "detail": "v0.4.7: narrow open string, four fretboard finishes, ready-state note preview and exact-MIDI ear quiz with up to 3 replays"
+      "path": "tests/gui_ear_layout_smoke.py"
     },
     {
       "id": "VG-20261022-0139",
       "date": "2026-10-22",
       "action": "github.commit",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "v0.4.7 atomic source/tests/journal commit to main; no GitHub Actions or frozen docs changed"
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261022-0140",
       "date": "2026-10-22",
-      "action": "drive.upload",
-      "status": "success",
-      "path": "vGUITAR_NoteTrainer_v0.4.7.zip",
-      "drive_file_id": "1sMcSy8YlN91UHH49FSILkVdMAmrqMimu",
-      "detail": "Packaged v0.4.7 release stored outside GitHub in designated Google Drive folder; verified Drive file id and URL"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0141",
       "date": "2026-10-22",
-      "action": "drive.update_file",
-      "status": "success",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
-      "detail": "Canonical machine index replaced in place with v0.4.7 release metadata, hash and Drive link; original index ID preserved"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0142",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0143",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0144",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_scale_mode.py",
-      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+      "path": "tests/test_scale_mode.py"
     },
     {
       "id": "VG-20261022-0145",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_scale_smoke.py",
-      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+      "path": "tests/gui_scale_smoke.py"
     },
     {
       "id": "VG-20261022-0146",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_ear_theme_smoke.py",
-      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+      "path": "tests/gui_ear_theme_smoke.py"
     },
     {
       "id": "VG-20261022-0147",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_fretboard_refactor_smoke.py",
-      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+      "path": "tests/gui_fretboard_refactor_smoke.py"
     },
     {
       "id": "VG-20261022-0148",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_ear_layout_smoke.py",
-      "detail": "v0.4.8: physical fret spacing, larger fret numbers, compact string labels and scale-sequence mode; verified locally"
+      "path": "tests/gui_ear_layout_smoke.py"
     },
     {
       "id": "VG-20261022-0149",
       "date": "2026-10-22",
       "action": "local.verify",
-      "status": "success",
-      "detail": "21 unit tests passed; GUI smoke, ear smoke, fretboard smoke, scale interaction and six-size layout smoke passed; WASAPI sound synthesis unchanged"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0150",
       "date": "2026-10-22",
       "action": "github.commit",
       "status": "success",
-      "path": "docs/dev/events.json",
-      "detail": "Atomic v0.4.8 changes on main; README/docs frozen except development JSON; GitHub Actions not used"
+      "path": "docs/dev/events.json"
     },
     {
       "id": "VG-20261022-0151",
       "date": "2026-10-22",
-      "action": "drive.upload",
-      "status": "success",
-      "detail": "Uploaded v0.4.8 runtime ZIP; SHA-256 0fbefed49e06281189705497c158e2ee9cd913f91108050b5a9350988bb497d3",
-      "path": "vGUITAR_NoteTrainer_v0.4.8.zip",
-      "drive_file_id": "1qBTEPvDHeqVXotCM1bb16zfHAjErcqzW"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0152",
       "date": "2026-10-22",
-      "action": "drive.update_file",
-      "status": "failed",
-      "detail": "First canonical file_index.json replacement produced zero bytes despite success response; detected by immediate metadata validation",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "failed"
     },
     {
       "id": "VG-20261022-0153",
       "date": "2026-10-22",
-      "action": "drive.update_file",
-      "status": "success",
-      "detail": "Recovered the canonical file_index.json in place from verified backup and added v0.4.8; same Drive file ID preserved",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0154",
       "date": "2026-10-22",
-      "action": "drive.verify",
-      "status": "success",
-      "detail": "Drive metadata reports 6970 bytes; raw file read confirms 11 indexed assets and v0.4.8 entry",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0155",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0156",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0157",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_scale_mode.py",
-      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+      "path": "tests/test_scale_mode.py"
     },
     {
       "id": "VG-20261022-0158",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_scale_smoke.py",
-      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+      "path": "tests/gui_scale_smoke.py"
     },
     {
       "id": "VG-20261022-0159",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_scale_auto_smoke.py",
-      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+      "path": "tests/gui_scale_auto_smoke.py"
     },
     {
       "id": "VG-20261022-0160",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_smoke.py",
-      "detail": "v0.4.9: automatic scale position by default, full five-fret six-string shape quiz, untimed pretest note labels; local 21 unit / 6 GUI smoke tests; docs frozen and no GitHub Actions"
+      "path": "tests/gui_smoke.py"
     },
     {
       "id": "VG-20261022-0161",
       "date": "2026-10-22",
       "action": "local.verify",
-      "status": "success",
-      "detail": "21 unittest tests pass; GUI checks for scale, auto position, history, ear mode, settings and fretboard pass on virtual display; audio hardware unchanged"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0162",
       "date": "2026-10-22",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomic release v0.4.9 in main with code+tests+dev JSON ledger. No documentation edits or GitHub Actions"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0163",
       "date": "2026-10-22",
-      "action": "drive.upload",
-      "status": "success",
-      "path": "vGUITAR_NoteTrainer_v0.4.9.zip",
-      "drive_file_id": "12v_p4tSr18WgG57D6lPuOY5a1cAPPapQ",
-      "sha256": "06e8027f78a7f01a088328c939f54c7a1a4820cb0e24c6d0be229d1eca8b12cb",
-      "detail": "Uploaded verified runtime ZIP v0.4.9 (35,239 bytes) to configured Drive asset folder"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0164",
       "date": "2026-10-22",
-      "action": "drive.update_file",
-      "status": "success",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
-      "detail": "In-place canonical index update for v0.4.9; read-back verified 7,576 bytes and 12 indexed files, no duplicate"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0165",
       "date": "2026-10-22",
       "action": "github.add_file",
       "status": "success",
-      "path": "vguitar_caged.py",
-      "detail": "Five standard major CAGED forms C/A/G/E/D with major triad validation, uniform tuning support and Drop D guard"
+      "path": "vguitar_caged.py"
     },
     {
       "id": "VG-20261022-0166",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "CAGED mode integrated into study map, guitar fretboard, quiz, history, clipboard export and keyboard next; preserves other modes"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0167",
       "date": "2026-10-22",
       "action": "github.add_file",
       "status": "success",
-      "path": "tests/test_caged.py",
-      "detail": "Pure CAGED shape / roots / thirds / fifths / tuning regression tests"
+      "path": "tests/test_caged.py"
     },
     {
       "id": "VG-20261022-0168",
       "date": "2026-10-22",
       "action": "github.add_file",
       "status": "success",
-      "path": "tests/gui_caged_smoke.py",
-      "detail": "GUI exercises on four window sizes, answers, exports, form cycling and unsupported tunings"
+      "path": "tests/gui_caged_smoke.py"
     },
     {
       "id": "VG-20261022-0169",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/gui_scale_smoke.py",
-      "detail": "Changed mode-button count expectation from four to five"
+      "path": "tests/gui_scale_smoke.py"
     },
     {
       "id": "VG-20261022-0170",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "tests/gui_ear_theme_smoke.py",
-      "detail": "Changed mode-button count expectation from four to five"
+      "path": "tests/gui_ear_theme_smoke.py"
     },
     {
       "id": "VG-20261022-0171",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "Version bump to 0.5.0"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0172",
       "date": "2026-10-22",
       "action": "local.verify",
-      "status": "success",
-      "detail": "21 existing unit tests + 6 CAGED unit tests passed; seven GUI smoke scripts passed on Xvfb; WASAPI hardware not checked"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0173",
       "date": "2026-10-22",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomic CAGED v0.5.0 commit on main; no GitHub Actions; documentation unchanged except docs/dev/events.json"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0174",
       "date": "2026-10-22",
-      "action": "drive.upload",
-      "status": "success",
-      "path": "vGUITAR_NoteTrainer_v0.5.0.zip",
-      "drive_file_id": "1FLFQZqZQV4WpMMp0CIqi7fJvLqLdpR8_",
-      "sha256": "a9e5ab170d6082557077782fb0efa5b6bec338234483a4c07ab4eb2cb54fbebe",
-      "detail": "Uploaded standalone runtime ZIP v0.5.0 with CAGED module; verified by Drive folder listing"
+      "action": "asset.legacy",
+      "status": "success"
     },
     {
       "id": "VG-20261022-0175",
       "date": "2026-10-22",
-      "action": "drive.update_file",
-      "status": "failed",
-      "path": "file_index.json",
-      "drive_file_id": "15pt27nZ0BjHfMZ5a6IVegOkW_vXVDznp",
-      "detail": "Prepared local updated index (13 assets) but connector rejected staged JSON file_uri; canonical Drive index remains at 12 entries, not claimed as updated. No duplicate index created."
+      "action": "asset.legacy",
+      "status": "failed"
     },
     {
       "id": "VG-20261022-0176",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0177",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_scale_shapes.py",
-      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+      "path": "vguitar_scale_shapes.py"
     },
     {
       "id": "VG-20261022-0178",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_pentatonic_boxes.py",
-      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+      "path": "tests/test_pentatonic_boxes.py"
     },
     {
       "id": "VG-20261022-0179",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_pentatonic_boxes_smoke.py",
-      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+      "path": "tests/gui_pentatonic_boxes_smoke.py"
     },
     {
       "id": "VG-20261022-0180",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_scale_mode.py",
-      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+      "path": "tests/test_scale_mode.py"
     },
     {
       "id": "VG-20261022-0181",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.5.1: true pentatonic boxes (five per key), independent full-fretboard and range modes, box/root preview, correct quiz scope and saved metadata"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0182",
       "date": "2026-10-22",
       "action": "local.verify",
-      "status": "success",
-      "detail": "12 unit tests; 7 GUI smoke scripts; A minor Box 1 G-string fret9 excluded, 3 tonic notes; all keys and boxes validated; hardware WASAPI unchanged"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0183",
       "date": "2026-10-22",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomic v0.5.1 on main with code, tests and docs/dev/events.json; no README/docs edits or GitHub Actions"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0184",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0185",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_scale_smoke.py",
-      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+      "path": "tests/gui_scale_smoke.py"
     },
     {
       "id": "VG-20261022-0186",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_scale_auto_smoke.py",
-      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+      "path": "tests/gui_scale_auto_smoke.py"
     },
     {
       "id": "VG-20261022-0187",
       "date": "2026-10-22",
       "action": "github.add_file",
       "status": "success",
-      "path": "vguitar_scale_patterns.py",
-      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+      "path": "vguitar_scale_patterns.py"
     },
     {
       "id": "VG-20261022-0188",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_scale_fingerings.py",
-      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+      "path": "tests/test_scale_fingerings.py"
     },
     {
       "id": "VG-20261022-0189",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_all_scale_fingerings_smoke.py",
-      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+      "path": "tests/gui_all_scale_fingerings_smoke.py"
     },
     {
       "id": "VG-20261022-0190",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.5.2: seven 3NPS diatonic positions; five minor blues boxes with ♭5; 7 scale families with selectable fingerings; adaptive selector and run metadata"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0191",
       "date": "2026-10-22",
       "action": "local.verify",
-      "status": "success",
-      "detail": "8 new pure pattern tests and py_compile passed across all 7 scale families x 12 keys; full GUI smoke added but not executed on this exact GitHub source; real WASAPI hardware not tested"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0192",
       "date": "2026-10-22",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomic v0.5.2 GitHub commit on main; docs and README unchanged except development JSON ledger; no GitHub Actions"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0193",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.5.3: five CAGED-linked major/minor scale maps, 2/3-note power chords, triad qualities + inversions on four string sets, labels, local prefs and JSON results"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261022-0194",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_forms.py",
-      "detail": "v0.5.3: five CAGED-linked major/minor scale maps, 2/3-note power chords, triad qualities + inversions on four string sets, labels, local prefs and JSON results"
+      "path": "vguitar_forms.py"
     },
     {
       "id": "VG-20261022-0195",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_guitar_forms.py",
-      "detail": "v0.5.3: five CAGED-linked major/minor scale maps, 2/3-note power chords, triad qualities + inversions on four string sets, labels, local prefs and JSON results"
+      "path": "tests/test_guitar_forms.py"
     },
     {
       "id": "VG-20261022-0196",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_forms_smoke.py",
-      "detail": "v0.5.3: five CAGED-linked major/minor scale maps, 2/3-note power chords, triad qualities + inversions on four string sets, labels, local prefs and JSON results"
+      "path": "tests/gui_forms_smoke.py"
     },
     {
       "id": "VG-20261022-0197",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_scale_smoke.py",
-      "detail": "v0.5.3: five CAGED-linked major/minor scale maps, 2/3-note power chords, triad qualities + inversions on four string sets, labels, local prefs and JSON results"
+      "path": "tests/gui_scale_smoke.py"
     },
     {
       "id": "VG-20261022-0198",
       "date": "2026-10-22",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_ear_theme_smoke.py",
-      "detail": "v0.5.3: five CAGED-linked major/minor scale maps, 2/3-note power chords, triad qualities + inversions on four string sets, labels, local prefs and JSON results"
+      "path": "tests/gui_ear_theme_smoke.py"
     },
     {
       "id": "VG-20261022-0199",
       "date": "2026-10-22",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.5.3: five CAGED-linked major/minor scale maps, 2/3-note power chords, triad qualities + inversions on four string sets, labels, local prefs and JSON results"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261022-0200",
       "date": "2026-10-22",
       "action": "local.verify",
-      "status": "success",
-      "detail": "8 generator unit tests passed over all 12 keys and standard/equivalent tuning; Python py_compile verified on local integration harness; GUI smoke added but Windows hardware and full GUI smoke still unverified"
+      "status": "success"
     },
     {
       "id": "VG-20261022-0201",
       "date": "2026-10-22",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomic v0.5.3 code/tests/dev ledger update on main; no GitHub Actions or documentation edits beyond dev JSON"
+      "status": "success"
     },
     {
       "id": "VG-20261023-0202",
       "date": "2026-10-23",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_notes.py",
-      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+      "path": "vguitar_notes.py"
     },
     {
       "id": "VG-20261023-0203",
       "date": "2026-10-23",
       "action": "github.update_file",
       "status": "success",
-      "path": "vguitar_strings.py",
-      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+      "path": "vguitar_strings.py"
     },
     {
       "id": "VG-20261023-0204",
       "date": "2026-10-23",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_string_selector.py",
-      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+      "path": "tests/test_string_selector.py"
     },
     {
       "id": "VG-20261023-0205",
       "date": "2026-10-23",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/gui_string_picker_smoke.py",
-      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+      "path": "tests/gui_string_picker_smoke.py"
     },
     {
       "id": "VG-20261023-0206",
       "date": "2026-10-23",
       "action": "github.update_tests",
       "status": "success",
-      "path": "tests/test_notes.py",
-      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+      "path": "tests/test_notes.py"
     },
     {
       "id": "VG-20261023-0207",
       "date": "2026-10-23",
       "action": "github.update_file",
       "status": "success",
-      "path": "VERSION.json",
-      "detail": "v0.5.4: arbitrary individual string selection; backward compatible counter; Name/Find/Ear/prefs/reports"
+      "path": "VERSION.json"
     },
     {
       "id": "VG-20261023-0208",
       "date": "2026-10-23",
       "action": "local.verify",
-      "status": "success",
-      "detail": "Five pure-Python string-selection tests passed locally. Tk regression smoke authored; not executed on published v0.5.4 yet."
+      "status": "success"
     },
     {
       "id": "VG-20261023-0209",
       "date": "2026-10-23",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomic commit with application, pure helper, tests, version, dev ledger. No GitHub Actions, README/docs untouched."
+      "status": "success"
     },
     {
       "id": "VG-20261023-0210",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "README.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "README.md"
     },
     {
       "id": "VG-20261023-0211",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "README.en.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "README.en.md"
     },
     {
       "id": "VG-20261023-0212",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "docs/USER_GUIDE.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "docs/USER_GUIDE.md"
     },
     {
       "id": "VG-20261023-0213",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "docs/CHANGELOG.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "docs/CHANGELOG.md"
     },
     {
       "id": "VG-20261023-0214",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "docs/releases/v0.5.4.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "docs/releases/v0.5.4.md"
     },
     {
       "id": "VG-20261023-0215",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "docs/releases/HISTORY.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "docs/releases/HISTORY.md"
     },
     {
       "id": "VG-20261023-0216",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "docs/README.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "docs/README.md"
     },
     {
       "id": "VG-20261023-0217",
       "date": "2026-10-23",
       "action": "github.add_release_tool",
       "status": "success",
-      "path": "scripts/release_history.ps1",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "scripts/release_history.ps1"
     },
     {
       "id": "VG-20261023-0218",
       "date": "2026-10-23",
       "action": "github.add_release_tool",
       "status": "success",
-      "path": "scripts/RELEASE.bat",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "scripts/RELEASE.bat"
     },
     {
       "id": "VG-20261023-0219",
       "date": "2026-10-23",
       "action": "github.add_icon",
       "status": "success",
-      "path": "assets/vguitar-icon.svg",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "assets/vguitar-icon.svg"
     },
     {
       "id": "VG-20261023-0220",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "project_policy.json",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "project_policy.json"
     },
     {
       "id": "VG-20261023-0221",
       "date": "2026-10-23",
-      "action": "docs.sync",
+      "action": "documentation.update",
       "status": "success",
-      "path": "CONTRIBUTING.md",
-      "detail": "Explicit #syncdocs: v0.5.4 bilingual README, verified 18-version history, Russian guide/changelog/release notes, app icon and local tagging/release workflow."
+      "path": "CONTRIBUTING.md"
     },
     {
       "id": "VG-20261023-0222",
       "date": "2026-10-23",
       "action": "release.prepare",
       "status": "success",
-      "path": "docs/releases/v0.5.4.md",
-      "detail": "Release notes and safe local publication script prepared; no remote tags or GitHub Release published by this connector."
+      "path": "docs/releases/v0.5.4.md"
     },
     {
       "id": "VG-20261023-0223",
       "date": "2026-10-23",
       "action": "github.commit",
-      "status": "success",
-      "detail": "Atomic docs(sync) publication on main; runtime and VERSION.json unchanged; tags/releases require user's local gh."
+      "status": "success"
     },
     {
       "id": "VG-20261023-0224",
       "date": "2026-10-23",
       "action": "github.fix_release_script",
       "status": "success",
-      "path": "scripts/release_history.ps1",
-      "detail": "PowerShell 5.1 NativeCommandError on `gh release view` 404 was terminating the release publication. Temporarily set ErrorActionPreference=Continue only for the existence probe, capture exit code and restore preference before gh release create."
+      "path": "scripts/release_history.ps1"
     },
     {
       "id": "VG-20261023-0225",
       "date": "2026-10-23",
       "action": "github.commit",
+      "status": "success"
+    },
+    {
+      "id": "VG-20261023-0226",
+      "date": "2026-10-23",
+      "action": "documentation.update",
       "status": "success",
-      "detail": "Fix release view error handling on main after v0.5.4 tag; tag not moved; user can run direct gh release create or pull and rerun -PublishRelease. Native Windows invocation still requires local verification."
+      "path": "README.md"
+    },
+    {
+      "id": "VG-20261023-0227",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "README.en.md"
+    },
+    {
+      "id": "VG-20261023-0228",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "docs/USER_GUIDE.md"
+    },
+    {
+      "id": "VG-20261023-0229",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "docs/CHANGELOG.md"
+    },
+    {
+      "id": "VG-20261023-0230",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "docs/releases/HISTORY.md"
+    },
+    {
+      "id": "VG-20261023-0231",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "docs/releases/v0.5.4.md"
+    },
+    {
+      "id": "VG-20261023-0232",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "docs/README.md"
+    },
+    {
+      "id": "VG-20261023-0233",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "CONTRIBUTING.md"
+    },
+    {
+      "id": "VG-20261023-0234",
+      "date": "2026-10-23",
+      "action": "documentation.update",
+      "status": "success",
+      "path": "SECURITY.md"
+    },
+    {
+      "id": "VG-20261023-0235",
+      "date": "2026-10-23",
+      "action": "maintenance.cleanup",
+      "status": "success",
+      "path": "project_policy.json"
+    },
+    {
+      "id": "VG-20261023-0236",
+      "date": "2026-10-23",
+      "action": "maintenance.cleanup",
+      "status": "success",
+      "path": ".gitignore"
+    },
+    {
+      "id": "VG-20261023-0237",
+      "date": "2026-10-23",
+      "action": "maintenance.cleanup",
+      "status": "success",
+      "path": "tests/gui_layout_smoke.py"
+    },
+    {
+      "id": "VG-20261023-0238",
+      "date": "2026-10-23",
+      "action": "maintenance.cleanup",
+      "status": "success",
+      "path": "requirements.txt"
+    },
+    {
+      "id": "VG-20261023-0239",
+      "date": "2026-10-23",
+      "action": "maintenance.cleanup",
+      "status": "success",
+      "path": "vguitar_audio.py"
+    },
+    {
+      "id": "VG-20261023-0240",
+      "date": "2026-10-23",
+      "action": "maintenance.sanitize_events",
+      "status": "success",
+      "path": "docs/dev/events.json"
+    },
+    {
+      "id": "VG-20261023-0241",
+      "date": "2026-10-23",
+      "action": "github.commit",
+      "status": "success"
     }
   ]
 }

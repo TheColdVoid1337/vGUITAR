@@ -1,7 +1,13 @@
 # Security Policy
 
-vGUITAR is a local, offline Tkinter application. It currently has no network, credential, or account integration.
+vGUITAR Note Trainer is a desktop application with locally stored preferences and exercise results. It does not require a user account or upload session data as part of normal training.
 
-If you discover a security issue, report it **privately** to the repository owner. Do not publish exploits, private data, or unpatched vulnerabilities in public issues. Include the affected version, reproduction steps, impact, and suggested remediation when possible. There is no promised response SLA.
+## Reporting a vulnerability
 
-Only execute code and downloaded ZIPs from sources you trust. GitHub hosts the source-of-truth code; binary/release artifacts are referenced through the project Drive index.
+Please disclose suspected vulnerabilities privately rather than posting exploit details, credentials, or personal data in public issues. Use GitHub's private vulnerability reporting for this repository when that feature is available. Include the affected version, steps to reproduce, and potential impact.
+
+Security fixes will be assessed as the project develops. No formal response-time guarantee is offered.
+
+## Protecting local data
+
+Only run source code and release downloads from trusted locations. Keep generated session reports, device-specific settings, secrets, and local configuration out of Git. Review files for sensitive information before attaching them to issues or pull requests.

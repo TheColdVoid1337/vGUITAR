@@ -446,3 +446,14 @@ htmlcov/
 # vGUITAR local settings and results
 /settings/
 /results/
+
+# Local/private project configuration and internal artifacts
+/project_policy.local.json
+/*.local.json
+/.private/
+/.local/
+/docs/dev/private/
+/secrets/
+*.pem
+*.key
+*.p12

@@ -1,6 +1,6 @@
 """Offline guitar-string sound synthesis and system audio playback.
 
-On Windows uses PortAudio (sounddevice) with WASAPI priority, as in TittyTatter.
+On Windows uses PortAudio (sounddevice) with a preference for WASAPI output.
 Other platforms retain available OS players. On Windows install sounddevice.
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ def synthesize_string(midi_note: int, volume: float = 0.65,
                       sample_rate: int = SAMPLE_RATE) -> bytes:
     """Render a soft, pitched guitar pluck or a short dead-fret buzz.
 
-    Adapt TittyTatter's harmonic strengths (fundamental + 2nd..5th harmonics)
+    Use harmonic partials (fundamental + 2nd..5th harmonics)
     for a sustained NOTE instead of its very short rhythm-game hit.  A lightly
     damped Karplus-Strong string adds organic motion; neither normal notes nor
     the note-test button use a separate percussive noise burst.
@@ -122,7 +122,7 @@ class AudioPlaybackError(RuntimeError):
 def find_output_devices(sd: Any) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
     """Prefer WASAPI's default output, then WASAPI speakers, then PortAudio default.
 
-    Matches TittyTatter's sounddevice/PortAudio WASAPI device discovery.
+    Enumerates sounddevice/PortAudio WASAPI devices.
     Returns a list for diagnostics, even when no output is available.
     """
     devices = sd.query_devices()
