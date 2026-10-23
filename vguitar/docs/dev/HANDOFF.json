@@ -1,0 +1,246 @@
+{
+  "format": "vguitar.chat_handoff",
+  "schema_version": 1,
+  "handoff_date": "2026-10-23",
+  "handoff_status": "complete_context_snapshot; verify live sources on resume",
+  "language": "ru",
+  "priority": "Continue vGUITAR development in a new ChatGPT conversation without restarting planning or repeating resolved issues.",
+  "safety_and_portability": {
+    "git_publication_intent": "Repository currently private; may become public. Keep this handoff free of account credentials, local absolute paths, personal exercise exports, external storage IDs, and private Drive links.",
+    "local_absolute_paths": "Intentionally excluded from the repository file. The bootstrap message may supply the Windows/WSL workspace path directly.",
+    "google_drive_folder_id": "Intentionally excluded. Discover the folder by its name using the connected Google Drive plugin.",
+    "credentials": "Never store or transmit tokens, passwords, API keys, OAuth strings, Google Drive object IDs, or secrets in docs, release notes, source files, or logs."
+  },
+  "project": {
+    "name": "vGUITAR",
+    "display_name": "vGUITAR Note Trainer",
+    "description": "Offline Windows Python/Tkinter guitar fretboard trainer: notes, scales, CAGED, chord forms, and ear training.",
+    "repository": "TheColdVoid1337/vGUITAR",
+    "repository_url": "https://github.com/TheColdVoid1337/vGUITAR",
+    "branch": "main",
+    "visibility_observed": "private",
+    "main_source_of_truth": "GitHub main; use the connected GitHub tools directly for reading and requested changes.",
+    "author_github": "https://github.com/TheColdVoid1337",
+    "license": "MIT",
+    "python": "3.9+",
+    "gui": "Tkinter",
+    "audio": "sounddevice / PortAudio, Windows WASAPI where available",
+    "version_file": "VERSION.json",
+    "current_version": "0.5.5",
+    "current_phase": "alpha, pre-release validation",
+    "latest_published_release": "v0.5.4",
+    "latest_release_url": "https://github.com/TheColdVoid1337/vGUITAR/releases/tag/v0.5.4",
+    "historical_annotated_tags": 18,
+    "target_next_public_release": "v0.5.5",
+    "tag_v0_5_5_state": "not created as of handoff",
+    "github_release_v0_5_5_state": "not created as of handoff",
+    "observed_head_before_handoff": "19c82e96c3514fec51ccb6f8696eefcce753fa71",
+    "git_history_policy": "Never silently rewrite Git history, move tags, force-push, create a release, or increase VERSION.json."
+  },
+  "repo_structure": {
+    "root_files": [
+      "RUN.bat",
+      "README.md",
+      "README.en.md",
+      "VERSION.json",
+      "requirements.txt",
+      "LICENSE",
+      "CONTRIBUTING.md",
+      "SECURITY.md",
+      "CODE_OF_CONDUCT.md",
+      ".gitignore",
+      ".editorconfig",
+      ".github/"
+    ],
+    "application": "vguitar/vguitar_notes.py",
+    "about_dialog": "vguitar/vguitar_about.py",
+    "audio": "vguitar/vguitar_audio.py",
+    "persistence": "vguitar/vguitar_storage.py",
+    "music_engine_modules": [
+      "vguitar/vguitar_strings.py",
+      "vguitar/vguitar_caged.py",
+      "vguitar/vguitar_forms.py",
+      "vguitar/vguitar_scale_patterns.py",
+      "vguitar/vguitar_scale_shapes.py"
+    ],
+    "resources": "vguitar/assets/",
+    "current_app_icon": "vguitar/assets/vguitar-icon.png",
+    "real_app_screenshot": "vguitar/assets/screenshot-main.png",
+    "russian_readme": "README.md",
+    "english_readme": "README.en.md",
+    "user_guide": "vguitar/docs/USER_GUIDE.md",
+    "changelog": "vguitar/docs/CHANGELOG.md",
+    "release_notes_v0_5_4": "vguitar/docs/releases/v0.5.4.md",
+    "version_history": "vguitar/docs/releases/HISTORY.md",
+    "machine_event_journal": "vguitar/docs/dev/events.json",
+    "developer_policy": "vguitar/project_policy.json",
+    "this_handoff": "vguitar/docs/dev/HANDOFF.json",
+    "tests": "vguitar/tests/",
+    "release_tool": "vguitar/scripts/release_history.ps1",
+    "release_launcher": "vguitar/scripts/RELEASE.bat",
+    "screenshot_capture": "vguitar/scripts/capture_screenshot.py",
+    "screenshot_publish": "vguitar/scripts/publish_screenshot.ps1",
+    "screenshot_publish_launcher": "vguitar/scripts/PUBLISH_SCREENSHOT.bat"
+  },
+  "user_data_and_env": {
+    "local_storage_root": "vguitar/data/",
+    "local_preferences": "vguitar/data/settings/",
+    "local_results": "vguitar/data/results/",
+    "legacy_preferences": "settings/",
+    "legacy_results": "results/",
+    "migration": "First launch uses copy-only migration of legacy JSON files to vguitar/data; never delete originals automatically.",
+    "override_environment_variable": "VGUITAR_DATA_DIR",
+    "ignore_policy": "Local data, virtual environments, caches, and private files are ignored by Git. Do not commit user results.",
+    "windows_venv": ".venv/Scripts/python.exe",
+    "windows_launcher": "RUN.bat creates .venv if needed and installs requirements.txt",
+    "wsl_venv_rule": "WSL is a command orchestrator; do not assume a Linux venv exists. Windows-specific Tk/audio testing may use the Windows venv executable through WSL.",
+    "local_workspace_path_policy": "Provide actual machine path in a user-authored bootstrap or runtime input, not in this public-bound JSON."
+  },
+  "implemented_features": {
+    "quiz": [
+      "Назвать: note name from fret/string",
+      "Найти: locate note on target string/fretboard",
+      "На слух: ear recognition"
+    ],
+    "quiz_configuration": "Choose physical strings individually (not necessarily adjacent), fret range up to 24, question count, study/review duration.",
+    "music_modes": [
+      "Гаммы: 7 scale types, 3NPS positions, five pentatonic/blues boxes",
+      "CAGED: five major chord shapes and linked major/natural-minor maps",
+      "Формы: power chords R-5/R-5-8, major/minor/diminished triads and inversions"
+    ],
+    "ui": "Dark navy main window; green vGUITAR text and compact version label; a single mode dropdown; fixed counter groups; right-side settings gear, History, and About (?) button; no duplicate native top menu.",
+    "about": "Full uncropped bright green rounded-corner icon, dynamic version from VERSION.json, developer profile and repo clickable links, brief help.",
+    "window_title": "Shows vGUITAR Note Trainer with current version.",
+    "reporting": "Local JSON session reports, accuracy and response times, history and export; no account required."
+  },
+  "work_protocol": {
+    "discussion_language": "Russian; user-facing public project README Russian with English alternative.",
+    "github_change_flow": "Prefer connected GitHub connector; read actual current main/target files before modifying. For multi-file changes, create blobs -> tree -> commit -> fast-forward update_ref with expected SHA; then read back to verify.",
+    "avoid_codex": "Do not delegate to Codex unless explicitly requested; if asked to write Codex tasks, use separate Markdown file for long prompts and recommend reasoning budget.",
+    "docs_freeze": "Treat README, README.en, public docs, icons and policy as protected. Change them during #syncdocs or when user explicitly directs changes to particular protected files; event ledger is an exception.",
+    "events_append_only": "vguitar/docs/dev/events.json is JSON object with .events array. Preserve prior records and append non-identifying event metadata in the same commit.",
+    "document_quality": "README targets end users, not chat participant. Avoid personal learning scenarios, AI collaboration notes, tool limitations, internal private paths, passwords, drive IDs, and iOS disclaimers.",
+    "code_changes": "Do not silently bump version; use v0.5.5 until user approves release. Preserve historical tags and release v0.5.4.",
+    "validation": "GitHub Actions disabled. Prefer actual tests when environment supports them; be transparent about inability to run Windows GUI tests from a cloud container. Require user's Windows acceptance before tagging/releasing.",
+    "release_workflow": "The existing release_history.ps1/RELEASE.bat is specifically hard-coded to v0.5.4 historical tagging. Do NOT use it to publish v0.5.5 without first deliberately updating or replacing release logic. Release v0.5.5 only on explicit instruction, after tests and release-note sync. Verify gh auth and avoid force tags.",
+    "drive_workflow": "Google Drive vGUITAR is a private archive, not the canonical current code. Google Drive folder uses Restricted and Limit access; connector access through owner was verified previously, recheck upon resume. No user data or Drive IDs in GitHub."
+  },
+  "shell_block_contract": {
+    "style_name": "vFLOW for WSL; Windows PowerShell for Windows-only operations",
+    "primary_development_shell_preference": "WSL/Bash, when a WSL environment is available; GUI and other native-Windows behavior must execute under Windows Python.",
+    "wsl_code_fence": "bash",
+    "powershell_code_fence": "powershell",
+    "bash_script_style": [
+      "One complete copy-pasteable Bash code block per scenario.",
+      "First command is cd to the actual project root provided by the user; fail if missing.",
+      "Use clear -x when interactive terminal cleanliness helps, without destroying scrollback; avoid unconditional clearing in CI/noninteractive sessions.",
+      "Check prerequisites and git HEAD/status before stateful operations.",
+      "Color-coded, numbered [1/N] stage headers with printf; set -e or explicit traps; print final PASS/FAIL and exit status.",
+      "Pause for an explicit READY confirmation via /dev/tty before any destructive or major irreversible local step.",
+      "Use real commands and correct quoting; do not invent runner commands or environment activation paths.",
+      "Do not feed Windows python.exe the same heredoc stdin as the surrounding Bash script; use </dev/null where necessary."
+    ],
+    "example_wsl_template": [
+      "cd \"${VGUITAR_WSL_PATH}\" || exit 1",
+      "clear -x",
+      "set -e",
+      "printf '\\033[1;36m[1/3] Git state\\033[0m\\n'",
+      "git status --short",
+      "git fetch origin",
+      "git pull --ff-only origin main",
+      "printf '\\033[1;36m[2/3] Version\\033[0m\\n'",
+      "git rev-parse HEAD",
+      "cat VERSION.json",
+      "printf '\\033[1;36m[3/3] Tests\\033[0m\\n'",
+      "./.venv/Scripts/python.exe -m unittest discover -s vguitar/tests -t vguitar -v </dev/null",
+      "printf '\\033[1;32mPASS\\033[0m\\n'"
+    ],
+    "windows_native_execution": "Prefer .\\RUN.bat for Windows launch; .\\.venv\\Scripts\\python.exe for native tests. Avoid using Linux Python for validating Windows audio behavior.",
+    "example_powershell_commands": [
+      "git pull --ff-only origin main",
+      ".\\RUN.bat",
+      ".\\.venv\\Scripts\\python.exe -m unittest discover -s vguitar/tests -t vguitar -v",
+      ".\\.venv\\Scripts\\python.exe vguitar\\tests\\gui_toolbar_responsive_smoke.py"
+    ],
+    "history_specificity": "vFLOW conventions are shared user preferences recovered from past projects; do not pretend they were all explicitly defined in the vGUITAR repo. This handoff standardizes them for future vGUITAR responses."
+  },
+  "verified_current_snapshot": {
+    "checked_at_local": "2026-10-23",
+    "github_head_before_handoff": "19c82e96c3514fec51ccb6f8696eefcce753fa71",
+    "version": "0.5.5 alpha",
+    "release_count": 1,
+    "released_tags": [
+      "v0.5.4"
+    ],
+    "historical_tag_count": 18,
+    "repository_file_count_before_handoff": 69,
+    "real_screenshot_committed": "yes; vguitar/assets/screenshot-main.png exists in current GitHub tree",
+    "screenshot_in_both_readmes": "yes; current README.md and README.en.md reference screenshot-main.png",
+    "screenshot_fix_history": [
+      "Windows PowerShell 5.1 parsed non-ASCII script as incorrect encoding; fixed by ASCII-only publisher.",
+      "Original publisher incorrectly decoded PNG dimensions as 46x22 due PowerShell byte bit-shift truncation; fixed using safe integer arithmetic in a subsequent commit.",
+      "GitHub main now includes 'docs: publish actual application screenshot in both READMEs' at observed HEAD; treat 46x22 as resolved unless a new error is shown."
+    ],
+    "known_recent_fixes": [
+      "Replaced multiple mode buttons with a dropdown; a gear opens settings and ? opens About.",
+      "Corrected Tkinter cross-parent pack error during mode changes, and made toolbar placement stable.",
+      "Reorganized implementation into vguitar/; legacy user data migrated using copy-only logic.",
+      "Added bright green rounded icon with transparent corners.",
+      "Product-facing bilingual README no longer includes personal context."
+    ],
+    "not_verified": "A full Windows test-suite/GUI acceptance pass covering all modes and audio after latest commit has not been conclusively provided. Do not claim it passed."
+  },
+  "google_drive": {
+    "folder_name": "vGUITAR",
+    "intended_access": "Restricted and Limit access enabled by owner; verify access in current connected account if needed.",
+    "inventory_verified": "2026-10-23",
+    "direct_file_count": 14,
+    "file_names": [
+      "file_index.json",
+      "vGUITAR_NoteTrainer_v0.5.0.zip",
+      "vGUITAR_NoteTrainer_v0.4.9.zip",
+      "vGUITAR_NoteTrainer_v0.4.8.zip",
+      "vGUITAR_NoteTrainer_v0.4.7.zip",
+      "vGUITAR_NoteTrainer_v0.4.5.zip",
+      "vGUITAR_NoteTrainer_v0.4.3.zip",
+      "vGUITAR_NoteTrainer_v0.4.2.zip",
+      "vGUITAR_NoteTrainer_v0.4.0.zip",
+      "vGUITAR_NoteTrainer_v0.3.0.zip",
+      "vGUITAR_NoteTrainer_v0.2.0.zip",
+      "vGUITAR_NoteTrainer_v0.1.zip",
+      "vGUITAR_v0.4.0_circle_preview.png",
+      "vGUITAR_NoteTrainer_preview_v0.1.png"
+    ],
+    "role": "Archive of legacy ZIP builds, metadata index and historical previews; does not replace live GitHub current source."
+  },
+  "continuity_of_preferences": {
+    "image_design": "Green, bright, friendly and simple; rounded app icon with transparent outside corners. Avoid cliche guitar-pick or note-symbol icon and dark gothic style.",
+    "fretboard_pedagogy": "Prefer precise visual fretboard diagrams, spelled notes in letter/Russian forms, root notes, intervals and degrees; sixth and fifth string navigation is core before expanding to other strings.",
+    "presentations": "Do not make marketing slides or collateral for icon proposals without explicit request.",
+    "privacy": "Keep internal/external Drive storage IDs, secrets, machine paths, and personal session data out of public-bound repo materials.",
+    "responses": "Direct, technical, nonpatronizing Russian. Show short runnable verification commands and precise results. Always distinguish observed evidence from assumptions."
+  },
+  "next_steps": {
+    "priority_1": "When user wants to continue: verify live HEAD, VERSION, app screenshot, README links, event journal, and state of release/tag v0.5.5. Do not redo the already published screenshot or the fixed 46x22 issue.",
+    "priority_2": "Run or request Windows validation of all mode selections, gear, History, About links/icon, audio, resized toolbar and GUI smoke. Review test errors before release.",
+    "priority_3": "On explicit #syncdocs or targeted user request prepare v0.5.5 final changelog and release notes; keep content public-facing.",
+    "priority_4": "Only when user explicitly approves, create annotated v0.5.5 tag and GitHub Release with notes. Preserve v0.5.4 and older tags; no force push.",
+    "freeze": "Do not autonomously increment VERSION, publish v0.5.5, or mutate Google Drive access."
+  },
+  "boot_procedure": [
+    "Read this handoff file from GitHub via connected GitHub plugin (private repository, not public web).",
+    "Read repository main metadata and compare observed HEAD to handoff snapshot (this handoff commit itself advances main).",
+    "Read VERSION.json, current README.md/README.en.md, vguitar/project_policy.json, vguitar/docs/dev/events.json tail, latest CHANGELOG and directory tree.",
+    "Use connected Google Drive to locate folder named vGUITAR; list existing 14 legacy archive/index/preview files, verifying any drift. Do not duplicate these files.",
+    "If actual source tests or artifacts are needed, initialize a clean scratch working directory, fetch only missing source files via authorized connectors or use a verified local clone; never assume the local Windows filesystem is mounted in the cloud.",
+    "For WSL commands, use the copy-pasteable vFLOW block convention and the local WSL path supplied in bootstrap. Prefer relative paths in files.",
+    "Summarize live state, deviations since snapshot, sandbox paths that were truly created, tests actually run, and next safest action.",
+    "Do not infer successful tests or releases from intent; honor GitHub docs freeze and user approval gates."
+  ],
+  "handoff_artifacts": {
+    "github_handoff_json": "vguitar/docs/dev/HANDOFF.json",
+    "supplemental_google_drive_zip_required": false,
+    "reason_no_zip": "All currently essential project code, user documentation, assets and screenshots are in the GitHub repository. Google Drive already stores historical ZIP builds and previews; machine-private session files were intentionally not collected. The portable workflow/context snapshot is captured in this JSON.",
+    "do_not_upload_duplicates": true
+  }
+}
